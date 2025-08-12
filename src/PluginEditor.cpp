@@ -119,11 +119,15 @@ void CrossFXAudioProcessorEditor::resized()
   auto top = area.removeFromTop(110);
   auto blendArea = top.removeFromLeft(area.getWidth() - 220).reduced(10, 28);
   blendSlider.setBounds(blendArea);
-  // Place Fade dropdown in a clear row below the top panel to avoid overlap with the Auto Gain button
+  // Place Fade dropdown on the right side, below the Auto Gain button, not overlapping anything
   {
-    auto fadeRow = area.removeFromTop(40);
-    auto fadeArea = fadeRow.removeFromLeft(240).reduced(10, 6);
-    fadeModeBox.setBounds(fadeArea.withHeight(24));
+    const int rightMargin = 12;
+    const int fadeWidth = 180;
+    const int fadeHeight = 24;
+    const int fadeX = getWidth() - rightMargin - fadeWidth;
+    const int fadeY = 56; // below top-right button (which sits at y=12, h=28)
+    auto fadeArea = juce::Rectangle<int>(fadeX, fadeY, fadeWidth, fadeHeight);
+    fadeModeBox.setBounds(fadeArea);
     // Label under dropdown
     auto* fadeLabel = dynamic_cast<juce::Label*>(findChildWithID("fadeLabel"));
     if (fadeLabel == nullptr)
@@ -131,13 +135,13 @@ void CrossFXAudioProcessorEditor::resized()
       auto lbl = std::make_unique<juce::Label>();
       lbl->setComponentID("fadeLabel");
       lbl->setText("Fade Type", juce::dontSendNotification);
-      lbl->setJustificationType(juce::Justification::centredLeft);
+      lbl->setJustificationType(juce::Justification::centred);
       lbl->setColour(juce::Label::textColourId, juce::Colours::white);
       addAndMakeVisible(lbl.get());
       lbl.release();
     }
     if (auto* lbl = dynamic_cast<juce::Label*>(findChildWithID("fadeLabel")))
-      lbl->setBounds(fadeArea.translated(0, 22).withHeight(18));
+      lbl->setBounds(fadeArea.translated(0, fadeHeight + 2).withHeight(18));
   }
 
   auto knobRow = area.removeFromBottom(160);
