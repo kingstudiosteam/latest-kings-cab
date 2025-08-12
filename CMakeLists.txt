@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(CrossFX VERSION 0.1.2 LANGUAGES C CXX OBJC OBJCXX)
+project(CrossFX VERSION 0.1.4 LANGUAGES C CXX OBJC OBJCXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -20,9 +20,9 @@ FetchContent_MakeAvailable(juce)
 juce_add_plugin(CrossFX
   COMPANY_NAME "King Studios"
   PLUGIN_MANUFACTURER "King Studios"
-  PLUGIN_MANUFACTURER_CODE MltB
-  PLUGIN_CODE Mlbd
-  BUNDLE_ID com.yourcompany.multiblend
+  PLUGIN_MANUFACTURER_CODE KngS
+  PLUGIN_CODE Mlb2
+  BUNDLE_ID com.kingstudios.multiblend
   PRODUCT_NAME "Multi-Blend"
   IS_SYNTH FALSE
   NEEDS_MIDI_INPUT FALSE
