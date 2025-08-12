@@ -82,10 +82,11 @@ void CrossFXAudioProcessorEditor::paint(juce::Graphics& g)
   // Remove title text; logo serves as brand/title
   if (logoImage.isValid())
   {
-    auto panel = juce::Rectangle<float>(10, 58, (float)getWidth()-20, 110.0f);
+    auto panel = juce::Rectangle<float>(10, 48, (float)getWidth()-20, 130.0f);
     lnF.drawBevelPanel(g, panel, 10.0f, false);
-    // Leave room at the right for the Auto Gain button
-    auto logoBounds = juce::Rectangle<int>(0, 64, getWidth()-140, 96);
+    // Center the logo within the full panel area (no right-side reservation)
+    auto logoBounds = juce::Rectangle<int>( (int)panel.getX() + 8, (int)panel.getY() + 8,
+                                            (int)panel.getWidth() - 16, (int)panel.getHeight() - 16 );
     g.drawImageWithin(logoImage, logoBounds.getX(), logoBounds.getY(), logoBounds.getWidth(), logoBounds.getHeight(), juce::RectanglePlacement::centred);
   }
   g.setFont(12.0f);
@@ -148,8 +149,8 @@ void CrossFXAudioProcessorEditor::resized()
 
   // Rollback: no alignment layout
 
-  // Position Auto Gain button to the right of the logo panel
-  auto btnBounds = juce::Rectangle<int>(getWidth()-120, 88, 100, 32);
+  // Position Auto Gain button at top-right, away from the centered logo panel
+  auto btnBounds = juce::Rectangle<int>(getWidth()-120, 12, 100, 28);
   autoGainButton.setBounds(btnBounds);
 }
 

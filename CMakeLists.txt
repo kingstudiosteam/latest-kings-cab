@@ -18,8 +18,8 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(juce)
 
 juce_add_plugin(CrossFX
-  COMPANY_NAME "YourCompany"
-  PLUGIN_MANUFACTURER "YourCompany"
+  COMPANY_NAME "King Studios"
+  PLUGIN_MANUFACTURER "King Studios"
   PLUGIN_MANUFACTURER_CODE MltB
   PLUGIN_CODE Mlbd
   BUNDLE_ID com.yourcompany.multiblend
