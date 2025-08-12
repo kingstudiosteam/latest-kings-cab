@@ -119,22 +119,26 @@ void CrossFXAudioProcessorEditor::resized()
   auto top = area.removeFromTop(110);
   auto blendArea = top.removeFromLeft(area.getWidth() - 220).reduced(10, 28);
   blendSlider.setBounds(blendArea);
-  auto fadeArea = top.removeFromLeft(200);
-  fadeModeBox.setBounds(fadeArea.removeFromTop(28).reduced(10, 4));
-  // Label under dropdown
-  auto* fadeLabel = dynamic_cast<juce::Label*>(findChildWithID("fadeLabel"));
-  if (fadeLabel == nullptr)
+  // Place Fade dropdown in a clear row below the top panel to avoid overlap with the Auto Gain button
   {
-    auto lbl = std::make_unique<juce::Label>();
-    lbl->setComponentID("fadeLabel");
-    lbl->setText("Fade Type", juce::dontSendNotification);
-    lbl->setJustificationType(juce::Justification::centred);
-    lbl->setColour(juce::Label::textColourId, juce::Colours::white);
-    addAndMakeVisible(lbl.get());
-    lbl.release();
+    auto fadeRow = area.removeFromTop(40);
+    auto fadeArea = fadeRow.removeFromLeft(240).reduced(10, 6);
+    fadeModeBox.setBounds(fadeArea.withHeight(24));
+    // Label under dropdown
+    auto* fadeLabel = dynamic_cast<juce::Label*>(findChildWithID("fadeLabel"));
+    if (fadeLabel == nullptr)
+    {
+      auto lbl = std::make_unique<juce::Label>();
+      lbl->setComponentID("fadeLabel");
+      lbl->setText("Fade Type", juce::dontSendNotification);
+      lbl->setJustificationType(juce::Justification::centredLeft);
+      lbl->setColour(juce::Label::textColourId, juce::Colours::white);
+      addAndMakeVisible(lbl.get());
+      lbl.release();
+    }
+    if (auto* lbl = dynamic_cast<juce::Label*>(findChildWithID("fadeLabel")))
+      lbl->setBounds(fadeArea.translated(0, 22).withHeight(18));
   }
-  if (auto* lbl = dynamic_cast<juce::Label*>(findChildWithID("fadeLabel")))
-    lbl->setBounds(fadeArea.removeFromTop(20));
 
   auto knobRow = area.removeFromBottom(160);
   auto leftKnob = knobRow.removeFromLeft(120).reduced(10);
@@ -149,8 +153,8 @@ void CrossFXAudioProcessorEditor::resized()
 
   // Rollback: no alignment layout
 
-  // Position Auto Gain button at top-right, away from the centered logo panel
-  auto btnBounds = juce::Rectangle<int>(getWidth()-120, 12, 100, 28);
+  // Position Auto Gain button at top-right, away from the centered logo panel and fade dropdown
+  auto btnBounds = juce::Rectangle<int>(getWidth() - 120, 12, 100, 28);
   autoGainButton.setBounds(btnBounds);
 }
 
