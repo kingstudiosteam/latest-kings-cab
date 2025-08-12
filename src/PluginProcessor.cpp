@@ -200,15 +200,16 @@ void CrossFXAudioProcessor::decayMeters(float factor)
 
 void CrossFXAudioProcessor::autoGainMatchToEqual()
 {
-  // Adjust Gain B so smoothed RMS levels match A (post-gain), clamp within slider bounds
-  const float a = ewmaRmsA.load();
-  const float b = ewmaRmsB.load();
-  if (b <= 0.0f || a <= 0.0f) return;
-  float targetDb = juce::Decibels::gainToDecibels(a) - juce::Decibels::gainToDecibels(b);
-  // Limit step size to avoid big jumps
-  targetDb = juce::jlimit(-3.0f, 3.0f, targetDb);
+  // Peak-match: adjust Gain B so peak B matches peak A (post-gain)
+  const float peakA = inputAPeak.load();
+  const float peakB = inputBPeak.load();
+  if (peakA <= 0.0f || peakB <= 0.0f)
+    return;
+
+  const float deltaDb = juce::Decibels::gainToDecibels(peakA) - juce::Decibels::gainToDecibels(peakB);
   const float currentDb = gainBParam->load();
-  const float newDb = juce::jlimit(-24.0f, 24.0f, currentDb + targetDb);
+  // Apply full correction in one press, clamped to slider bounds
+  const float newDb = juce::jlimit(-24.0f, 24.0f, currentDb + deltaDb);
   valueTreeState.getParameter("gainB")->beginChangeGesture();
   valueTreeState.getParameter("gainB")->setValueNotifyingHost((newDb + 24.0f) / 48.0f);
   valueTreeState.getParameter("gainB")->endChangeGesture();
