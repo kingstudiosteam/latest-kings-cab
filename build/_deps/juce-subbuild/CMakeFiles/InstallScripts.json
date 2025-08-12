@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/Users/justinmitchell/Dev/CrossFX/build/_deps/juce-subbuild/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

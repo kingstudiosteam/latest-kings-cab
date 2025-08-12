@@ -1,0 +1,40 @@
+name: Build Windows VST3
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure (CMake MSVC x64 Release)
+        shell: bash
+        run: |
+          cmake -B build -S . -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DJUCE_BUILD_EXAMPLES=OFF -DJUCE_BUILD_EXTRAS=OFF -DJUCE_FETCH_VST3_SDK=ON
+
+      - name: Build (Release)
+        shell: bash
+        run: |
+          cmake --build build --config Release --parallel
+
+      - name: Zip VST3 artefact
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          src_path="build/CrossFX_artefacts/Release/VST3/Multi-Blend.vst3"
+          if [ ! -d "$src_path" ]; then echo "VST3 not found at $src_path" && exit 1; fi
+          powershell -Command "Compress-Archive -Path '$src_path' -DestinationPath 'artifacts/Multi-Blend-Windows.zip' -Force"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Multi-Blend-Windows
+          path: artifacts/Multi-Blend-Windows.zip
+          if-no-files-found: error
+
+
