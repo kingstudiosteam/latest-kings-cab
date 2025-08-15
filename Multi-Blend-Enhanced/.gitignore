@@ -1,0 +1,21 @@
+# OS
+.DS_Store
+
+# Build directories
+build/
+cmake-build-*/
+
+# IDE/Editor
+.vscode/
+.idea/
+*.user
+
+# CMake cache
+CMakeCache.txt
+CMakeFiles/
+_deps/
+
+# JUCE/Generated
+JuceLibraryCode/
+
+
