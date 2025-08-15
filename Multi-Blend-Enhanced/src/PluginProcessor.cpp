@@ -12,6 +12,16 @@ CrossFXEnhancedAudioProcessor::CrossFXEnhancedAudioProcessor()
   gainAParam = valueTreeState.getRawParameterValue("gainA");
   gainBParam = valueTreeState.getRawParameterValue("gainB");
   fadeModeParam = valueTreeState.getRawParameterValue("fadeMode");
+  
+  // Clipper/Limiter parameters
+  clipperTypeParam = valueTreeState.getRawParameterValue("clipperType");
+  limiterTypeParam = valueTreeState.getRawParameterValue("limiterType");
+  thresholdParam = valueTreeState.getRawParameterValue("threshold");
+  ceilingParam = valueTreeState.getRawParameterValue("ceiling");
+  attackParam = valueTreeState.getRawParameterValue("attack");
+  releaseParam = valueTreeState.getRawParameterValue("release");
+  ratioParam = valueTreeState.getRawParameterValue("ratio");
+  kneeParam = valueTreeState.getRawParameterValue("knee");
 
   startTimerHz(30);
 }
@@ -26,7 +36,14 @@ bool CrossFXEnhancedAudioProcessor::isBusesLayoutSupported(const BusesLayout& la
 
 void CrossFXEnhancedAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-  // Rollback: no special prepare needed
+  // Prepare clipper/limiters
+  juce::dsp::ProcessSpec spec;
+  spec.sampleRate = sampleRate;
+  spec.maximumBlockSize = static_cast<juce::uint32>(samplesPerBlock);
+  spec.numChannels = 1;
+  
+  clipperLimiterA.prepare(spec);
+  clipperLimiterB.prepare(spec);
 }
 
 void CrossFXEnhancedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
@@ -67,6 +84,9 @@ void CrossFXEnhancedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 
   const float preA = juce::Decibels::decibelsToGain(gainAParam->load());
   const float preB = juce::Decibels::decibelsToGain(gainBParam->load());
+  
+  // Update clipper/limiter parameters
+  updateClipperLimiterParameters();
 
   float peakA = 0.0f, peakB = 0.0f;           // pre-gain (unused for meters)
   float peakAGain = 0.0f, peakBGain = 0.0f;   // post-gain for meters
@@ -89,7 +109,18 @@ void CrossFXEnhancedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
       // Meter should reflect post-gain per input regardless of blend
       const float aMeter = preA * a;
       const float bMeter = preB * bS;
-      outCh[i] = aG + bG;
+      
+      // Apply clipper/limiter to individual channels before blending
+      float aClipped = aG;
+      float bClipped = bG;
+      
+      if (clipperTypeParam->load() > 0.0f || limiterTypeParam->load() > 0.0f)
+      {
+        clipperLimiterA.process(&aClipped, 1);
+        clipperLimiterB.process(&bClipped, 1);
+      }
+      
+      outCh[i] = aClipped + bClipped;
 
       const float absA = std::abs(a);
       const float absBv = std::abs(bS);
@@ -174,8 +205,82 @@ CrossFXEnhancedAudioProcessor::APVTS::ParameterLayout CrossFXEnhancedAudioProces
   params.push_back(std::make_unique<juce::AudioParameterChoice>(
     juce::ParameterID{"fadeMode", 1}, "Fade",
     juce::StringArray{ "Linear", "Smooth", "EqualPower" }, 2));
+  
+  // Clipper/Limiter parameters
+  params.push_back(std::make_unique<juce::AudioParameterChoice>(
+    juce::ParameterID{"clipperType", 1}, "Clipper",
+    juce::StringArray{ "None", "Soft Tanh", "Hard Clip", "Cubic", "Hermite", "Foldback" }, 0));
+  
+  params.push_back(std::make_unique<juce::AudioParameterChoice>(
+    juce::ParameterID{"limiterType", 1}, "Limiter",
+    juce::StringArray{ "None", "Feedback", "Feedforward", "Look Ahead" }, 0));
+  
+  params.push_back(std::make_unique<juce::AudioParameterFloat>(
+    juce::ParameterID{"threshold", 1}, "Threshold",
+    juce::NormalisableRange<float>{ -60.0f, 0.0f, 0.1f }, -12.0f,
+    juce::AudioParameterFloatAttributes().withLabel("dB")));
+  
+  params.push_back(std::make_unique<juce::AudioParameterFloat>(
+    juce::ParameterID{"ceiling", 1}, "Ceiling",
+    juce::NormalisableRange<float>{ -60.0f, 0.0f, 0.1f }, -0.1f,
+    juce::AudioParameterFloatAttributes().withLabel("dB")));
+  
+  params.push_back(std::make_unique<juce::AudioParameterFloat>(
+    juce::ParameterID{"attack", 1}, "Attack",
+    juce::NormalisableRange<float>{ 0.1f, 100.0f, 0.1f }, 1.0f,
+    juce::AudioParameterFloatAttributes().withLabel("ms")));
+  
+  params.push_back(std::make_unique<juce::AudioParameterFloat>(
+    juce::ParameterID{"release", 1}, "Release",
+    juce::NormalisableRange<float>{ 1.0f, 1000.0f, 1.0f }, 50.0f,
+    juce::AudioParameterFloatAttributes().withLabel("ms")));
+  
+  params.push_back(std::make_unique<juce::AudioParameterFloat>(
+    juce::ParameterID{"ratio", 1}, "Ratio",
+    juce::NormalisableRange<float>{ 1.0f, 20.0f, 0.1f }, 4.0f,
+    juce::AudioParameterFloatAttributes().withLabel(":1")));
+  
+  params.push_back(std::make_unique<juce::AudioParameterFloat>(
+    juce::ParameterID{"knee", 1}, "Knee",
+    juce::NormalisableRange<float>{ 0.0f, 24.0f, 0.1f }, 6.0f,
+    juce::AudioParameterFloatAttributes().withLabel("dB")));
 
   return { params.begin(), params.end() };
+}
+
+void CrossFXEnhancedAudioProcessor::updateClipperLimiterParameters()
+{
+  // Update clipper type
+  const int clipperType = static_cast<int>(clipperTypeParam->load() + 0.5f);
+  clipperLimiterA.setClipperType(static_cast<ClipperLimiter::ClipperType>(clipperType));
+  clipperLimiterB.setClipperType(static_cast<ClipperLimiter::ClipperType>(clipperType));
+  
+  // Update limiter type
+  const int limiterType = static_cast<int>(limiterTypeParam->load() + 0.5f);
+  clipperLimiterA.setLimiterType(static_cast<ClipperLimiter::LimiterType>(limiterType));
+  clipperLimiterB.setLimiterType(static_cast<ClipperLimiter::LimiterType>(limiterType));
+  
+  // Update other parameters
+  clipperLimiterA.setThreshold(thresholdParam->load());
+  clipperLimiterB.setThreshold(thresholdParam->load());
+  clipperLimiterA.setCeiling(ceilingParam->load());
+  clipperLimiterB.setCeiling(ceilingParam->load());
+  clipperLimiterA.setAttack(attackParam->load());
+  clipperLimiterB.setAttack(attackParam->load());
+  clipperLimiterA.setRelease(releaseParam->load());
+  clipperLimiterB.setRelease(releaseParam->load());
+  clipperLimiterA.setRatio(ratioParam->load());
+  clipperLimiterB.setRatio(ratioParam->load());
+  clipperLimiterA.setKnee(kneeParam->load());
+  clipperLimiterB.setKnee(kneeParam->load());
+  
+  // Update meters
+  clipperAGainReduction.store(clipperLimiterA.getGainReduction());
+  clipperBGainReduction.store(clipperLimiterB.getGainReduction());
+  clipperAInputLevel.store(clipperLimiterA.getInputLevel());
+  clipperBInputLevel.store(clipperLimiterB.getInputLevel());
+  clipperAOutputLevel.store(clipperLimiterA.getOutputLevel());
+  clipperBOutputLevel.store(clipperLimiterB.getOutputLevel());
 }
 
 // JUCE factory

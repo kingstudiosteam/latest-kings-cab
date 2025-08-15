@@ -1,5 +1,6 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
+#include "ClipperLimiter.h"
 // Rollback: no DSP delay lines needed
 
 class CrossFXEnhancedAudioProcessor : public juce::AudioProcessor, public juce::Timer
@@ -46,6 +47,8 @@ public:
   void autoGainMatchToEqual();
 
   void decayMeters(float factor);
+  
+  void updateClipperLimiterParameters();
 
   void timerCallback() override;
 
@@ -55,6 +58,16 @@ private:
   std::atomic<float>* gainAParam { nullptr };
   std::atomic<float>* gainBParam { nullptr };
   std::atomic<float>* fadeModeParam { nullptr }; // 0=Linear,1=Smooth,2=EqualPower
+  
+  // Clipper/Limiter parameters
+  std::atomic<float>* clipperTypeParam { nullptr };
+  std::atomic<float>* limiterTypeParam { nullptr };
+  std::atomic<float>* thresholdParam { nullptr };
+  std::atomic<float>* ceilingParam { nullptr };
+  std::atomic<float>* attackParam { nullptr };
+  std::atomic<float>* releaseParam { nullptr };
+  std::atomic<float>* ratioParam { nullptr };
+  std::atomic<float>* kneeParam { nullptr };
 
   std::atomic<float> inputAPeak { 0.0f };
   std::atomic<float> inputBPeak { 0.0f };
@@ -66,6 +79,18 @@ private:
   std::atomic<float> lastRmsB { 0.0f };
   std::atomic<float> ewmaRmsA { 0.0f };
   std::atomic<float> ewmaRmsB { 0.0f };
+
+  // Clipper/Limiter instances
+  ClipperLimiter clipperLimiterA;
+  ClipperLimiter clipperLimiterB;
+  
+  // Clipper/Limiter meters
+  std::atomic<float> clipperAGainReduction { 0.0f };
+  std::atomic<float> clipperBGainReduction { 0.0f };
+  std::atomic<float> clipperAInputLevel { 0.0f };
+  std::atomic<float> clipperBInputLevel { 0.0f };
+  std::atomic<float> clipperAOutputLevel { 0.0f };
+  std::atomic<float> clipperBOutputLevel { 0.0f };
 
   // Rollback: no phase align state
 };

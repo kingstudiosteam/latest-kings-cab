@@ -37,6 +37,7 @@ target_sources(CrossFX PRIVATE
   src/PluginProcessor.cpp
   src/PluginEditor.cpp
   src/LookAndFeel.cpp
+  src/ClipperLimiter.cpp
 )
 
 # Embed assets (logo) into the binary

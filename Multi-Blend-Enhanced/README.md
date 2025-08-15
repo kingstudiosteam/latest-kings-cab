@@ -10,6 +10,32 @@ An enhanced version of the Multi-Blend VST 3 plugin with additional features.
 - Auto-gain matching feature
 - Clip detection
 
+## New Features - Clipper/Limiter System
+- **Professional Clipper Algorithms:**
+  - Soft Tanh: Musical harmonic saturation
+  - Hard Clip: Aggressive digital limiting
+  - Cubic: Smooth analog-like saturation
+  - Hermite: High-quality polynomial (minimal aliasing)
+  - Foldback: Complex harmonic wave folding
+
+- **Advanced Limiter Types:**
+  - Feedback Limiter: Real-time with smooth response
+  - Feedforward Limiter: Fast response, minimal latency
+  - Look-Ahead Limiter: Professional mastering quality
+
+- **Comprehensive Controls:**
+  - Threshold: -60dB to 0dB
+  - Ceiling: -60dB to 0dB
+  - Attack: 0.1ms to 100ms
+  - Release: 1ms to 1000ms
+  - Ratio: 1:1 to 20:1
+  - Knee: 0dB to 24dB (soft knee)
+
+- **Real-time Metering:**
+  - Gain reduction meters for both channels
+  - Input/Output level monitoring
+  - Visual feedback for all parameters
+
 ## Planned Enhancements
 
 ### Phase 1: Advanced Blending

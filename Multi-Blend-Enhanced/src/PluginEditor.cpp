@@ -5,7 +5,7 @@
 CrossFXAudioProcessorEditor::CrossFXAudioProcessorEditor(CrossFXEnhancedAudioProcessor& p)
   : juce::AudioProcessorEditor(&p), audioProcessor(p)
 {
-  setSize(560, 300);
+  setSize(800, 500);
   setLookAndFeel(&lnF);
   startTimerHz(30);
 
@@ -71,7 +71,127 @@ CrossFXAudioProcessorEditor::CrossFXAudioProcessorEditor(CrossFXEnhancedAudioPro
   dbBLabel.setJustificationType(juce::Justification::centred);
   dbBLabel.setColour(juce::Label::textColourId, juce::Colours::white);
 
-  // Rollback: no alignment controls
+  // Setup Clipper/Limiter UI
+  setupClipperLimiterUI();
+}
+
+void CrossFXAudioProcessorEditor::setupClipperLimiterUI()
+{
+  auto& vts = audioProcessor.getValueTreeState();
+  
+  // Setup clipper type combo box
+  clipperTypeBox.clear(juce::dontSendNotification);
+  clipperTypeBox.addItem("None", 1);
+  clipperTypeBox.addItem("Soft Tanh", 2);
+  clipperTypeBox.addItem("Hard Clip", 3);
+  clipperTypeBox.addItem("Cubic", 4);
+  clipperTypeBox.addItem("Hermite", 5);
+  clipperTypeBox.addItem("Foldback", 6);
+  
+  // Setup limiter type combo box
+  limiterTypeBox.clear(juce::dontSendNotification);
+  limiterTypeBox.addItem("None", 1);
+  limiterTypeBox.addItem("Feedback", 2);
+  limiterTypeBox.addItem("Feedforward", 3);
+  limiterTypeBox.addItem("Look Ahead", 4);
+  
+  // Setup sliders
+  thresholdSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+  thresholdSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 18);
+  ceilingSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+  ceilingSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 18);
+  attackSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+  attackSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 18);
+  releaseSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+  releaseSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 18);
+  ratioSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+  ratioSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 18);
+  kneeSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+  kneeSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 18);
+  
+  // Setup labels
+  thresholdLabel.setText("Threshold", juce::dontSendNotification);
+  thresholdLabel.setJustificationType(juce::Justification::centred);
+  thresholdLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+  
+  ceilingLabel.setText("Ceiling", juce::dontSendNotification);
+  ceilingLabel.setJustificationType(juce::Justification::centred);
+  ceilingLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+  
+  attackLabel.setText("Attack", juce::dontSendNotification);
+  attackLabel.setJustificationType(juce::Justification::centred);
+  attackLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+  
+  releaseLabel.setText("Release", juce::dontSendNotification);
+  releaseLabel.setJustificationType(juce::Justification::centred);
+  releaseLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+  
+  ratioLabel.setText("Ratio", juce::dontSendNotification);
+  ratioLabel.setJustificationType(juce::Justification::centred);
+  ratioLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+  
+  kneeLabel.setText("Knee", juce::dontSendNotification);
+  kneeLabel.setJustificationType(juce::Justification::centred);
+  kneeLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+  
+  // Setup meter labels
+  grALabel.setText("GR A", juce::dontSendNotification);
+  grALabel.setJustificationType(juce::Justification::centred);
+  grALabel.setColour(juce::Label::textColourId, juce::Colours::yellow);
+  
+  grBLabel.setText("GR B", juce::dontSendNotification);
+  grBLabel.setJustificationType(juce::Justification::centred);
+  grBLabel.setColour(juce::Label::textColourId, juce::Colours::yellow);
+  
+  inputALabel.setText("In A", juce::dontSendNotification);
+  inputALabel.setJustificationType(juce::Justification::centred);
+  inputALabel.setColour(juce::Label::textColourId, juce::Colours::lightblue);
+  
+  inputBLabel.setText("In B", juce::dontSendNotification);
+  inputBLabel.setJustificationType(juce::Justification::centred);
+  inputBLabel.setColour(juce::Label::textColourId, juce::Colours::lightblue);
+  
+  outputALabel.setText("Out A", juce::dontSendNotification);
+  outputALabel.setJustificationType(juce::Justification::centred);
+  outputALabel.setColour(juce::Label::textColourId, juce::Colours::lightgreen);
+  
+  outputBLabel.setText("Out B", juce::dontSendNotification);
+  outputBLabel.setJustificationType(juce::Justification::centred);
+  outputBLabel.setColour(juce::Label::textColourId, juce::Colours::lightgreen);
+  
+  // Add components to UI
+  addAndMakeVisible(clipperTypeBox);
+  addAndMakeVisible(limiterTypeBox);
+  addAndMakeVisible(thresholdSlider);
+  addAndMakeVisible(ceilingSlider);
+  addAndMakeVisible(attackSlider);
+  addAndMakeVisible(releaseSlider);
+  addAndMakeVisible(ratioSlider);
+  addAndMakeVisible(kneeSlider);
+  addAndMakeVisible(thresholdLabel);
+  addAndMakeVisible(ceilingLabel);
+  addAndMakeVisible(attackLabel);
+  addAndMakeVisible(releaseLabel);
+  addAndMakeVisible(ratioLabel);
+  addAndMakeVisible(kneeLabel);
+  addAndMakeVisible(grALabel);
+  addAndMakeVisible(grBLabel);
+  addAndMakeVisible(inputALabel);
+  addAndMakeVisible(inputBLabel);
+  addAndMakeVisible(outputALabel);
+  addAndMakeVisible(outputBLabel);
+  
+  // Create parameter attachments
+  clipperTypeAttachment = std::make_unique<juce::ComboBoxParameterAttachment>(
+    *dynamic_cast<juce::AudioParameterChoice*>(vts.getParameter("clipperType")), clipperTypeBox);
+  limiterTypeAttachment = std::make_unique<juce::ComboBoxParameterAttachment>(
+    *dynamic_cast<juce::AudioParameterChoice*>(vts.getParameter("limiterType")), limiterTypeBox);
+  thresholdAttachment = std::make_unique<juce::SliderParameterAttachment>(*vts.getParameter("threshold"), thresholdSlider);
+  ceilingAttachment = std::make_unique<juce::SliderParameterAttachment>(*vts.getParameter("ceiling"), ceilingSlider);
+  attackAttachment = std::make_unique<juce::SliderParameterAttachment>(*vts.getParameter("attack"), attackSlider);
+  releaseAttachment = std::make_unique<juce::SliderParameterAttachment>(*vts.getParameter("release"), releaseSlider);
+  ratioAttachment = std::make_unique<juce::SliderParameterAttachment>(*vts.getParameter("ratio"), ratioSlider);
+  kneeAttachment = std::make_unique<juce::SliderParameterAttachment>(*vts.getParameter("knee"), kneeSlider);
 }
 
 void CrossFXAudioProcessorEditor::paint(juce::Graphics& g)
@@ -144,6 +264,56 @@ void CrossFXAudioProcessorEditor::resized()
       lbl->setBounds(fadeArea.translated(0, fadeHeight + 2).withHeight(18));
   }
 
+  // Clipper/Limiter section
+  auto clipperSection = area.removeFromBottom(200);
+  
+  // Top row: Combo boxes
+  auto comboRow = clipperSection.removeFromTop(60);
+  auto clipperComboArea = comboRow.removeFromLeft(150).reduced(5);
+  auto limiterComboArea = comboRow.removeFromLeft(150).reduced(5);
+  
+  clipperTypeBox.setBounds(clipperComboArea);
+  limiterTypeBox.setBounds(limiterComboArea);
+  
+  // Bottom row: Sliders
+  auto sliderRow = clipperSection.removeFromBottom(120);
+  const int sliderWidth = 80;
+  const int sliderSpacing = 10;
+  int sliderX = 10;
+  
+  // Threshold and Ceiling
+  auto thresholdArea = juce::Rectangle<int>(sliderX, 0, sliderWidth, 100);
+  thresholdSlider.setBounds(thresholdArea);
+  thresholdLabel.setBounds(thresholdArea.translated(0, 100).withHeight(20));
+  sliderX += sliderWidth + sliderSpacing;
+  
+  auto ceilingArea = juce::Rectangle<int>(sliderX, 0, sliderWidth, 100);
+  ceilingSlider.setBounds(ceilingArea);
+  ceilingLabel.setBounds(ceilingArea.translated(0, 100).withHeight(20));
+  sliderX += sliderWidth + sliderSpacing;
+  
+  // Attack and Release
+  auto attackArea = juce::Rectangle<int>(sliderX, 0, sliderWidth, 100);
+  attackSlider.setBounds(attackArea);
+  attackLabel.setBounds(attackArea.translated(0, 100).withHeight(20));
+  sliderX += sliderWidth + sliderSpacing;
+  
+  auto releaseArea = juce::Rectangle<int>(sliderX, 0, sliderWidth, 100);
+  releaseSlider.setBounds(releaseArea);
+  releaseLabel.setBounds(releaseArea.translated(0, 100).withHeight(20));
+  sliderX += sliderWidth + sliderSpacing;
+  
+  // Ratio and Knee
+  auto ratioArea = juce::Rectangle<int>(sliderX, 0, sliderWidth, 100);
+  ratioSlider.setBounds(ratioArea);
+  ratioLabel.setBounds(ratioArea.translated(0, 100).withHeight(20));
+  sliderX += sliderWidth + sliderSpacing;
+  
+  auto kneeArea = juce::Rectangle<int>(sliderX, 0, sliderWidth, 100);
+  kneeSlider.setBounds(kneeArea);
+  kneeLabel.setBounds(kneeArea.translated(0, 100).withHeight(20));
+  
+  // Original gain knobs
   auto knobRow = area.removeFromBottom(160);
   auto leftKnob = knobRow.removeFromLeft(120).reduced(10);
   auto rightKnob = knobRow.removeFromRight(120).reduced(10);
@@ -154,8 +324,6 @@ void CrossFXAudioProcessorEditor::resized()
   dbBLabel.setBounds(rightLabel);
   gainASlider.setBounds(leftKnob);
   gainBSlider.setBounds(rightKnob);
-
-  // Rollback: no alignment layout
 
   // Position Auto Gain button at top-right, away from the centered logo panel and fade dropdown
   auto btnBounds = juce::Rectangle<int>(getWidth() - 120, 12, 100, 28);
@@ -168,6 +336,14 @@ void CrossFXAudioProcessorEditor::timerCallback()
   // Update dB labels (post-gain peaks)
   dbALabel.setText(juce::String(audioProcessor.getInputAdB(), 1) + " dB", juce::dontSendNotification);
   dbBLabel.setText(juce::String(audioProcessor.getInputBdB(), 1) + " dB", juce::dontSendNotification);
+  
+  // Update clipper/limiter meter labels
+  grALabel.setText(juce::String(audioProcessor.clipperAGainReduction.load(), 1) + " dB", juce::dontSendNotification);
+  grBLabel.setText(juce::String(audioProcessor.clipperBGainReduction.load(), 1) + " dB", juce::dontSendNotification);
+  inputALabel.setText(juce::String(audioProcessor.clipperAInputLevel.load(), 1) + " dB", juce::dontSendNotification);
+  inputBLabel.setText(juce::String(audioProcessor.clipperBInputLevel.load(), 1) + " dB", juce::dontSendNotification);
+  outputALabel.setText(juce::String(audioProcessor.clipperAOutputLevel.load(), 1) + " dB", juce::dontSendNotification);
+  outputBLabel.setText(juce::String(audioProcessor.clipperBOutputLevel.load(), 1) + " dB", juce::dontSendNotification);
 }
 
 void CrossFXAudioProcessorEditor::drawMeter(juce::Graphics& g, juce::Rectangle<int> bounds, float peak, juce::Colour fill)
