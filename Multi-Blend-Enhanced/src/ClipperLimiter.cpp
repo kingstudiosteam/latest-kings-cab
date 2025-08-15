@@ -99,24 +99,33 @@ void ClipperLimiter::processClipper(float* buffer, int numSamples)
 
 float ClipperLimiter::processSoftTanh(float input, float threshold)
 {
-    // Musical soft clipping using hyperbolic tangent
-    // Provides harmonic saturation with minimal aliasing
-    const float drive = 1.0f / threshold;
-    const float saturated = std::tanh(input * drive);
-    return saturated * threshold;
+  // Musical soft clipping using hyperbolic tangent
+  // Provides harmonic saturation with minimal aliasing
+  if (!std::isfinite(input) || !std::isfinite(threshold) || threshold <= 0.0f)
+    return 0.0f;
+    
+  const float drive = 1.0f / threshold;
+  const float saturated = std::tanh(input * drive);
+  return saturated * threshold;
 }
 
 float ClipperLimiter::processHardClip(float input, float threshold)
 {
-    // Digital hard clipping - aggressive limiting
-    return juce::jlimit(-threshold, threshold, input);
+  // Digital hard clipping - aggressive limiting
+  if (!std::isfinite(input) || !std::isfinite(threshold) || threshold <= 0.0f)
+    return 0.0f;
+    
+  return juce::jlimit(-threshold, threshold, input);
 }
 
 float ClipperLimiter::processCubic(float input, float threshold)
 {
-    // Smooth cubic saturation - analog-like characteristics
-    const float drive = 1.0f / threshold;
-    const float x = input * drive;
+  // Smooth cubic saturation - analog-like characteristics
+  if (!std::isfinite(input) || !std::isfinite(threshold) || threshold <= 0.0f)
+    return 0.0f;
+    
+  const float drive = 1.0f / threshold;
+  const float x = input * drive;
     
     if (std::abs(x) < 2.0f / 3.0f)
     {
@@ -137,10 +146,13 @@ float ClipperLimiter::processCubic(float input, float threshold)
 
 float ClipperLimiter::processHermite(float input, float threshold)
 {
-    // High-quality Hermite polynomial interpolation
-    // Minimizes aliasing while providing smooth saturation
-    const float drive = 1.0f / threshold;
-    const float x = input * drive;
+  // High-quality Hermite polynomial interpolation
+  // Minimizes aliasing while providing smooth saturation
+  if (!std::isfinite(input) || !std::isfinite(threshold) || threshold <= 0.0f)
+    return 0.0f;
+    
+  const float drive = 1.0f / threshold;
+  const float x = input * drive;
     const float absX = std::abs(x);
     
     if (absX <= 1.0f)
@@ -158,9 +170,12 @@ float ClipperLimiter::processHermite(float input, float threshold)
 
 float ClipperLimiter::processFoldback(float input, float threshold)
 {
-    // Wave folding - creates complex harmonics
-    const float drive = 1.0f / threshold;
-    const float x = input * drive;
+  // Wave folding - creates complex harmonics
+  if (!std::isfinite(input) || !std::isfinite(threshold) || threshold <= 0.0f)
+    return 0.0f;
+    
+  const float drive = 1.0f / threshold;
+  const float x = input * drive;
     const float absX = std::abs(x);
     
     if (absX <= 1.0f)
@@ -314,9 +329,26 @@ void ClipperLimiter::processLookAheadLimiter(float* buffer, int numSamples)
 
 void ClipperLimiter::process(float* buffer, int numSamples)
 {
+  try
+  {
+    // Validate input
+    if (buffer == nullptr || numSamples <= 0)
+      return;
+    
     // Process clipper first, then limiter
     processClipper(buffer, numSamples);
     processLimiter(buffer, numSamples);
+  }
+  catch (const std::exception& e)
+  {
+    // Log error and continue with safe defaults
+    juce::Logger::writeToLog("ClipperLimiter::process exception: " + juce::String(e.what()));
+  }
+  catch (...)
+  {
+    // Catch any other exceptions to prevent crashes
+    juce::Logger::writeToLog("ClipperLimiter::process unknown exception");
+  }
 }
 
 // ============================================================================

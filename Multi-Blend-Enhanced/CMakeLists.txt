@@ -29,6 +29,8 @@ juce_add_plugin(CrossFX
   NEEDS_MIDI_OUTPUT FALSE
   IS_MIDI_EFFECT FALSE
   FORMATS VST3 AU
+  VST3_CATEGORIES "Fx"
+  AU_MAIN_TYPE "kAudioUnitType_Effect"
 )
 
 juce_generate_juce_header(CrossFX)

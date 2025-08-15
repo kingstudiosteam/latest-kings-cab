@@ -48,11 +48,13 @@ void CrossFXEnhancedAudioProcessor::prepareToPlay(double sampleRate, int samples
 
 void CrossFXEnhancedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
 {
-  juce::ScopedNoDenormals noDenormals;
+  try
+  {
+    juce::ScopedNoDenormals noDenormals;
 
-  auto aIn = getBusBuffer(buffer, true, 0);
-  auto bIn = getBusBuffer(buffer, true, 1);
-  auto out = getBusBuffer(buffer, false, 0);
+    auto aIn = getBusBuffer(buffer, true, 0);
+    auto bIn = getBusBuffer(buffer, true, 1);
+    auto out = getBusBuffer(buffer, false, 0);
 
   const int numSamples = buffer.getNumSamples();
   const int numChannels = juce::jmin(out.getNumChannels(), aIn.getNumChannels());
@@ -165,6 +167,17 @@ void CrossFXEnhancedAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
   ewmaRmsB.store(ewmaRmsB.load() * (1.0f - alpha) + rmsB * alpha);
   if (peakA >= 0.999f) inputAClip.store(20); else inputAClip.store(std::max(0, inputAClip.load() - 1));
   if (peakB >= 0.999f) inputBClip.store(20); else inputBClip.store(std::max(0, inputBClip.load() - 1));
+  }
+  catch (const std::exception& e)
+  {
+    // Log error and continue processing with safe defaults
+    juce::Logger::writeToLog("CrossFXEnhancedAudioProcessor::processBlock exception: " + juce::String(e.what()));
+  }
+  catch (...)
+  {
+    // Catch any other exceptions to prevent crashes
+    juce::Logger::writeToLog("CrossFXEnhancedAudioProcessor::processBlock unknown exception");
+  }
 }
 
 void CrossFXEnhancedAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
@@ -250,10 +263,12 @@ CrossFXEnhancedAudioProcessor::APVTS::ParameterLayout CrossFXEnhancedAudioProces
 
 void CrossFXEnhancedAudioProcessor::updateClipperLimiterParameters()
 {
-  // Update clipper type
-  const int clipperType = static_cast<int>(clipperTypeParam->load() + 0.5f);
-  clipperLimiterA.setClipperType(static_cast<ClipperLimiter::ClipperType>(clipperType));
-  clipperLimiterB.setClipperType(static_cast<ClipperLimiter::ClipperType>(clipperType));
+  try
+  {
+    // Update clipper type
+    const int clipperType = static_cast<int>(clipperTypeParam->load() + 0.5f);
+    clipperLimiterA.setClipperType(static_cast<ClipperLimiter::ClipperType>(clipperType));
+    clipperLimiterB.setClipperType(static_cast<ClipperLimiter::ClipperType>(clipperType));
   
   // Update limiter type
   const int limiterType = static_cast<int>(limiterTypeParam->load() + 0.5f);
@@ -281,6 +296,17 @@ void CrossFXEnhancedAudioProcessor::updateClipperLimiterParameters()
   clipperBInputLevel.store(clipperLimiterB.getInputLevel());
   clipperAOutputLevel.store(clipperLimiterA.getOutputLevel());
   clipperBOutputLevel.store(clipperLimiterB.getOutputLevel());
+  }
+  catch (const std::exception& e)
+  {
+    // Log error and continue with safe defaults
+    juce::Logger::writeToLog("CrossFXEnhancedAudioProcessor::updateClipperLimiterParameters exception: " + juce::String(e.what()));
+  }
+  catch (...)
+  {
+    // Catch any other exceptions to prevent crashes
+    juce::Logger::writeToLog("CrossFXEnhancedAudioProcessor::updateClipperLimiterParameters unknown exception");
+  }
 }
 
 // JUCE factory

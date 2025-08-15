@@ -65,8 +65,8 @@ private:
     void processLookAheadLimiter(float* buffer, int numSamples);
 
     // Helper functions
-    float dbToGain(float db) const { return juce::Decibels::decibelsToGain(db); }
-    float gainToDb(float gain) const { return juce::Decibels::gainToDecibels(gain); }
+    inline float dbToGain(float db) const { return juce::Decibels::decibelsToGain(db); }
+    inline float gainToDb(float gain) const { return juce::Decibels::gainToDecibels(gain); }
     float calculateKneeGain(float inputLevel, float threshold, float knee) const;
 
     // Parameters
