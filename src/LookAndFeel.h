@@ -1,46 +1,129 @@
 #pragma once
-#include <juce_gui_basics/juce_gui_basics.h>
 
-class MultiBlenderLookAndFeel : public juce::LookAndFeel_V4
+#include <JuceHeader.h>
+
+//==============================================================================
+/**
+ * The King's Cab Premium Look and Feel
+ * 
+ * Features:
+ * - Stunning 3D metallic appearance with depth and shadows
+ * - Premium gold/silver gradient styling
+ * - Glossy, reflective surfaces for professional studio look
+ * - Optimized for cabinet simulation interface
+ */
+class KingsCabLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
-  MultiBlenderLookAndFeel();
-  ~MultiBlenderLookAndFeel() override = default;
+    //==============================================================================
+    KingsCabLookAndFeel();
+    ~KingsCabLookAndFeel() override;
 
-  void drawLinearSlider(juce::Graphics& g, int x, int y, int width, int height,
-                        float sliderPos, float minSliderPos, float maxSliderPos,
-                        const juce::Slider::SliderStyle, juce::Slider& slider) override;
+    //==============================================================================
+    // Slider customization for premium feel
+    void drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height,
+                         float sliderPos, float rotaryStartAngle, float rotaryEndAngle,
+                         juce::Slider& slider) override;
+    
+    // Vintage Neve/API style knobs
+    void drawVintageKnob(juce::Graphics& g, int x, int y, int width, int height,
+                        float sliderPos, float rotaryStartAngle, float rotaryEndAngle,
+                        juce::Slider& slider);
 
-  void drawComboBox(juce::Graphics& g, int width, int height, bool isButtonDown,
-                    int buttonX, int buttonY, int buttonW, int buttonH, juce::ComboBox& box) override;
+    void drawLinearSlider(juce::Graphics& g, int x, int y, int width, int height,
+                         float sliderPos, float minSliderPos, float maxSliderPos,
+                         const juce::Slider::SliderStyle style, juce::Slider& slider) override;
 
-  void drawButtonBackground(juce::Graphics& g, juce::Button& button,
-                            const juce::Colour& backgroundColour,
-                            bool shouldDrawButtonAsHighlighted,
-                            bool shouldDrawButtonAsDown) override;
+    //==============================================================================
+    // Button styling for 3D effect
+    void drawButtonBackground(juce::Graphics& g, juce::Button& button,
+                             const juce::Colour& backgroundColour,
+                             bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
 
-  juce::Font getLabelFont(juce::Label&) override;
-  juce::Font getComboBoxFont(juce::ComboBox&) override;
+    void drawButtonText(juce::Graphics& g, juce::TextButton& button,
+                       bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
 
-  // Palette
-  juce::Colour background() const { return juce::Colour(0xff141414); }
-  juce::Colour surface() const { return juce::Colour(0xff1f1f1f); }
-  juce::Colour primary() const { return juce::Colour(0xff6ab04a); }
-  juce::Colour accent() const { return juce::Colour(0xff00a8ff); }
-  juce::Colour text() const { return juce::Colours::white; }
+    //==============================================================================
+    // ComboBox for folder selection
+    void drawComboBox(juce::Graphics& g, int width, int height, bool isButtonDown,
+                     int buttonX, int buttonY, int buttonW, int buttonH,
+                     juce::ComboBox& comboBox) override;
 
-  // Vintage knob colors
-  juce::Colour knobFace() const { return juce::Colour(0xff2b2b2b); }
-  juce::Colour knobRing() const { return juce::Colour(0xffb1976b); }
-  juce::Colour knobMarker() const { return juce::Colour(0xffe0c58a); }
+    void positionComboBoxText(juce::ComboBox& box, juce::Label& label) override;
 
-  void drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height,
-                        float sliderPosProportional, float rotaryStartAngle, float rotaryEndAngle,
-                        juce::Slider& slider) override;
+    //==============================================================================
+    // Label styling for clean text
+    void drawLabel(juce::Graphics& g, juce::Label& label) override;
 
-  // Utility to draw a beveled panel (recessed/raised)
-  void drawBevelPanel(juce::Graphics& g, juce::Rectangle<float> bounds, float radius,
-                      bool recessed = true) const;
+    //==============================================================================
+    // Window and panel backgrounds
+    void fillResizableWindowBackground(juce::Graphics& g, int w, int h,
+                                      const juce::BorderSize<int>& border,
+                                      juce::ResizableWindow& window) override;
+
+    //==============================================================================
+    // Color scheme for premium metallic look
+    enum ColourIds
+    {
+        // Main background and panels
+        backgroundColourId = 0x2000001,
+        panelBackgroundColourId = 0x2000002,
+        
+        // Metallic elements
+        metallicHighlightColourId = 0x2000003,
+        metallicShadowColourId = 0x2000004,
+        metallicBaseColourId = 0x2000005,
+        
+        // Gold accents
+        goldHighlightColourId = 0x2000006,
+        goldBaseColourId = 0x2000007,
+        goldShadowColourId = 0x2000008,
+        
+        // Text and labels
+        primaryTextColourId = 0x2000009,
+        secondaryTextColourId = 0x2000010,
+        
+        // Control elements
+        knobBaseColourId = 0x2000011,
+        knobHighlightColourId = 0x2000012,
+        buttonActiveColourId = 0x2000013,
+        buttonInactiveColourId = 0x2000014,
+        
+        // Vintage knob colors (Neve/API style)
+        vintageKnobBodyColourId = 0x2000015,
+        vintageKnobRimColourId = 0x2000016,
+        vintageKnobPointerColourId = 0x2000017,
+        vintageKnobShadowColourId = 0x2000018
+    };
+
+private:
+    //==============================================================================
+    // Gradient and effect helpers
+    void drawMetallicGradient(juce::Graphics& g, const juce::Rectangle<int>& bounds, 
+                             bool isPressed = false, bool isHighlighted = false);
+    
+    void drawGoldAccent(juce::Graphics& g, const juce::Rectangle<int>& bounds);
+    
+    void draw3DFrame(juce::Graphics& g, const juce::Rectangle<int>& bounds, 
+                     bool isInset = false, float cornerSize = 4.0f);
+    
+    void drawGlossyOverlay(juce::Graphics& g, const juce::Rectangle<int>& bounds, 
+                          float cornerSize = 4.0f);
+
+    //==============================================================================
+    // Premium color palette
+    void initializeColors();
+    
+    juce::Colour metallicBase;
+    juce::Colour metallicHighlight;
+    juce::Colour metallicShadow;
+    juce::Colour goldBase;
+    juce::Colour goldHighlight;
+    juce::Colour goldShadow;
+    juce::Colour darkBackground;
+    juce::Colour lightText;
+    juce::Colour dimText;
+
+    //==============================================================================
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(KingsCabLookAndFeel)
 };
-
-

@@ -1,73 +1,84 @@
 #pragma once
-#include <juce_audio_processors/juce_audio_processors.h>
-// Rollback: no DSP delay lines needed
 
-class CrossFXAudioProcessor : public juce::AudioProcessor, public juce::Timer
+#include <JuceHeader.h>
+#include "DSP/ConvolutionEngine.h"
+#include "DSP/IRManager.h"
+
+//==============================================================================
+/**
+ * The King's Cab - Professional Impulse Response Loader
+ * 
+ * High-performance VST3 plugin for guitar cabinet simulation with 6 IR slots.
+ * Optimized for low CPU usage and professional audio quality.
+ */
+class TheKingsCabAudioProcessor : public juce::AudioProcessor
 {
 public:
-  CrossFXAudioProcessor();
-  ~CrossFXAudioProcessor() override = default;
+    //==============================================================================
+    TheKingsCabAudioProcessor();
+    ~TheKingsCabAudioProcessor() override;
 
-  void prepareToPlay(double sampleRate, int samplesPerBlock) override;
-  void releaseResources() override {}
-  bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
+    //==============================================================================
+    void prepareToPlay(double sampleRate, int samplesPerBlock) override;
+    void releaseResources() override;
 
-  void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+#ifndef JucePlugin_PreferredChannelConfigurations
+    bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
+#endif
 
-  juce::AudioProcessorEditor* createEditor() override;
-  bool hasEditor() const override { return true; }
+    void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 
-  const juce::String getName() const override { return JucePlugin_Name; }
-  bool acceptsMidi() const override { return false; }
-  bool producesMidi() const override { return false; }
-  double getTailLengthSeconds() const override { return 0.0; }
+    //==============================================================================
+    juce::AudioProcessorEditor* createEditor() override;
+    bool hasEditor() const override;
 
-  int getNumPrograms() override { return 1; }
-  int getCurrentProgram() override { return 0; }
-  void setCurrentProgram(int) override {}
-  const juce::String getProgramName(int) override { return {}; }
-  void changeProgramName(int, const juce::String&) override {}
+    //==============================================================================
+    const juce::String getName() const override;
 
-  void getStateInformation(juce::MemoryBlock& destData) override;
-  void setStateInformation(const void* data, int sizeInBytes) override;
+    bool acceptsMidi() const override;
+    bool producesMidi() const override;
+    bool isMidiEffect() const override;
+    double getTailLengthSeconds() const override;
 
-  using APVTS = juce::AudioProcessorValueTreeState;
-  APVTS& getValueTreeState() { return valueTreeState; }
+    //==============================================================================
+    int getNumPrograms() override;
+    int getCurrentProgram() override;
+    void setCurrentProgram(int index) override;
+    const juce::String getProgramName(int index) override;
+    void changeProgramName(int index, const juce::String& newName) override;
 
-  static APVTS::ParameterLayout createParameterLayout();
+    //==============================================================================
+    void getStateInformation(juce::MemoryBlock& destData) override;
+    void setStateInformation(const void* data, int sizeInBytes) override;
 
-  // Meter accessors
-  float getInputAPeak() const { return inputAPeak.load(); }
-  float getInputBPeak() const { return inputBPeak.load(); }
-  bool getInputAClipped() const { return inputAClip.load() > 0; }
-  bool getInputBClipped() const { return inputBClip.load() > 0; }
-  float getInputAdB() const { return juce::Decibels::gainToDecibels(inputAPeak.load(), -100.0f); }
-  float getInputBdB() const { return juce::Decibels::gainToDecibels(inputBPeak.load(), -100.0f); }
-  void autoGainMatchToEqual();
+    //==============================================================================
+    // IR Management
+    void loadImpulseResponse(int slotIndex, const juce::File& irFile);
+    void clearImpulseResponse(int slotIndex);
+    IRManager& getIRManager() { return irManager; }
+    ConvolutionEngine& getConvolutionEngine() { return convolutionEngine; }
+    
+    // Parameter access
+    juce::AudioProcessorValueTreeState& getValueTreeState() { return valueTreeState; }
 
-  void decayMeters(float factor);
-
-  void timerCallback() override;
+    // Constants
+    static constexpr int kNumIRSlots = 6;
+    static constexpr int kMaxIRLength = 192000; // 4 seconds at 48kHz
 
 private:
-  APVTS valueTreeState;
-  std::atomic<float>* blendParam { nullptr }; // A/B
-  std::atomic<float>* gainAParam { nullptr };
-  std::atomic<float>* gainBParam { nullptr };
-  std::atomic<float>* fadeModeParam { nullptr }; // 0=Linear,1=Smooth,2=EqualPower
+    //==============================================================================
+    // Parameter creation helper
+    juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
-  std::atomic<float> inputAPeak { 0.0f };
-  std::atomic<float> inputBPeak { 0.0f };
-  std::atomic<int> inputAClip { 0 };
-  std::atomic<int> inputBClip { 0 };
-  std::atomic<int> peakAHoldTicks { 0 };
-  std::atomic<int> peakBHoldTicks { 0 };
-  std::atomic<float> lastRmsA { 0.0f };
-  std::atomic<float> lastRmsB { 0.0f };
-  std::atomic<float> ewmaRmsA { 0.0f };
-  std::atomic<float> ewmaRmsB { 0.0f };
+    // Core components
+    juce::AudioProcessorValueTreeState valueTreeState;
+    ConvolutionEngine convolutionEngine;
+    IRManager irManager;
 
-  // Rollback: no phase align state
+    // Performance monitoring
+    double currentSampleRate = 44100.0;
+    int currentBlockSize = 512;
+
+    //==============================================================================
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TheKingsCabAudioProcessor)
 };
-
-

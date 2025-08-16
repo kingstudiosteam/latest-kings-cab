@@ -1,220 +1,338 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-CrossFXAudioProcessor::CrossFXAudioProcessor()
-  : juce::AudioProcessor(BusesProperties()
-      .withInput("Main Input", juce::AudioChannelSet::stereo(), true)
-      .withInput("Sidechain", juce::AudioChannelSet::stereo(), true)
-      .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
-    valueTreeState(*this, nullptr, "PARAMS", createParameterLayout())
+//==============================================================================
+TheKingsCabAudioProcessor::TheKingsCabAudioProcessor()
+#ifndef JucePlugin_PreferredChannelConfigurations
+     : AudioProcessor (BusesProperties()
+                     #if ! JucePlugin_IsMidiEffect
+                      #if ! JucePlugin_IsSynth
+                       .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
+                      #endif
+                       .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
+                     #endif
+                       ),
+#endif
+      valueTreeState(*this, nullptr, "PARAMETERS", createParameterLayout()),
+      convolutionEngine(kNumIRSlots, kMaxIRLength),
+      irManager()
 {
-  blendParam = valueTreeState.getRawParameterValue("blend");
-  gainAParam = valueTreeState.getRawParameterValue("gainA");
-  gainBParam = valueTreeState.getRawParameterValue("gainB");
-  fadeModeParam = valueTreeState.getRawParameterValue("fadeMode");
-
-  startTimerHz(30);
+    // Initialize IR manager with King Studios exclusive IR collection
+    // This plugin only works with the premium IRs provided in this directory
+    irManager.setIRDirectory(juce::File("/Users/justinmitchell/Desktop/KINGS CAB"));
 }
 
-bool CrossFXAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
+TheKingsCabAudioProcessor::~TheKingsCabAudioProcessor()
 {
-  const auto& in = layouts.getMainInputChannelSet();
-  const auto& out = layouts.getMainOutputChannelSet();
-  if (in != out) return false;
-  return (in == juce::AudioChannelSet::mono() || in == juce::AudioChannelSet::stereo());
 }
 
-void CrossFXAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
+//==============================================================================
+const juce::String TheKingsCabAudioProcessor::getName() const
 {
-  // Rollback: no special prepare needed
+    return JucePlugin_Name;
 }
 
-void CrossFXAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
+bool TheKingsCabAudioProcessor::acceptsMidi() const
 {
-  juce::ScopedNoDenormals noDenormals;
+   #if JucePlugin_WantsMidiInput
+    return true;
+   #else
+    return false;
+   #endif
+}
 
-  auto aIn = getBusBuffer(buffer, true, 0);
-  auto bIn = getBusBuffer(buffer, true, 1);
-  auto out = getBusBuffer(buffer, false, 0);
+bool TheKingsCabAudioProcessor::producesMidi() const
+{
+   #if JucePlugin_ProducesMidiOutput
+    return true;
+   #else
+    return false;
+   #endif
+}
 
-  const int numSamples = buffer.getNumSamples();
-  const int numChannels = juce::jmin(out.getNumChannels(), aIn.getNumChannels());
-  // Rollback: no ring capture
+bool TheKingsCabAudioProcessor::isMidiEffect() const
+{
+   #if JucePlugin_IsMidiEffect
+    return true;
+   #else
+    return false;
+   #endif
+}
 
-  // Run auto-align when requested
-  // Rollback: no alignment processing
+double TheKingsCabAudioProcessor::getTailLengthSeconds() const
+{
+    return 4.0; // Maximum IR length
+}
 
-  // Apply user invert option
-  const bool invA = false; // rollback
-  const bool invB = false; // rollback
+int TheKingsCabAudioProcessor::getNumPrograms()
+{
+    return 1;   // NB: some hosts don't cope very well if you tell them there are 0 programs,
+                // so this should be at least 1, even if you're not really implementing programs.
+}
 
-  const float t = juce::jlimit(0.0f, 1.0f, blendParam->load());
-  const int mode = static_cast<int>(fadeModeParam->load() + 0.5f);
-  float wA = 1.0f - t;
-  float wB = t;
-  if (mode == 1) // Smooth (S-curve)
-  {
-    const float s = t * t * (3.0f - 2.0f * t);
-    wA = 1.0f - s;
-    wB = s;
-  }
-  else if (mode == 2) // EqualPower
-  {
-    const float theta = t * juce::MathConstants<float>::halfPi;
-    wA = std::cos(theta);
-    wB = std::sin(theta);
-  }
+int TheKingsCabAudioProcessor::getCurrentProgram()
+{
+    return 0;
+}
 
-  const float preA = juce::Decibels::decibelsToGain(gainAParam->load());
-  const float preB = juce::Decibels::decibelsToGain(gainBParam->load());
+void TheKingsCabAudioProcessor::setCurrentProgram (int index)
+{
+    juce::ignoreUnused(index);
+}
 
-  float peakA = 0.0f, peakB = 0.0f;           // pre-gain (unused for meters)
-  float peakAGain = 0.0f, peakBGain = 0.0f;   // post-gain for meters
-  double sumSqA = 0.0, sumSqB = 0.0;
+const juce::String TheKingsCabAudioProcessor::getProgramName (int index)
+{
+    juce::ignoreUnused(index);
+    return {};
+}
 
-  for (int ch = 0; ch < numChannels; ++ch)
-  {
-    const float* inA = aIn.getReadPointer(ch);
-    const float* inB = bIn.getNumChannels() > ch ? bIn.getReadPointer(ch) : nullptr;
-    float* outCh = out.getWritePointer(ch);
+void TheKingsCabAudioProcessor::changeProgramName (int index, const juce::String& newName)
+{
+    juce::ignoreUnused(index, newName);
+}
 
-    for (int i = 0; i < numSamples; ++i)
+//==============================================================================
+void TheKingsCabAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+{
+    currentSampleRate = sampleRate;
+    currentBlockSize = samplesPerBlock;
+
+    // Prepare the convolution engine with current audio settings
+    juce::dsp::ProcessSpec spec;
+    spec.sampleRate = sampleRate;
+    spec.maximumBlockSize = static_cast<juce::uint32>(samplesPerBlock);
+    spec.numChannels = static_cast<juce::uint32>(getTotalNumOutputChannels());
+
+    convolutionEngine.prepare(spec);
+}
+
+void TheKingsCabAudioProcessor::releaseResources()
+{
+    convolutionEngine.reset();
+}
+
+#ifndef JucePlugin_PreferredChannelConfigurations
+bool TheKingsCabAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+{
+  #if JucePlugin_IsMidiEffect
+    juce::ignoreUnused (layouts);
+    return true;
+  #else
+    // This is the place where you check if the layout is supported.
+    // In this template code we only support mono or stereo.
+    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
+     && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
+        return false;
+
+    // This checks if the input layout matches the output layout
+   #if ! JucePlugin_IsSynth
+    if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
+        return false;
+   #endif
+
+    return true;
+  #endif
+}
+#endif
+
+void TheKingsCabAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+{
+    juce::ignoreUnused(midiMessages);
+
+    juce::ScopedNoDenormals noDenormals;
+    auto totalNumInputChannels  = getTotalNumInputChannels();
+    auto totalNumOutputChannels = getTotalNumOutputChannels();
+
+    // Clear any output channels that don't contain input data
+    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
+        buffer.clear (i, 0, buffer.getNumSamples());
+
+    // Create audio block for DSP processing
+    juce::dsp::AudioBlock<float> block(buffer);
+    juce::dsp::ProcessContextReplacing<float> context(block);
+
+    // Process through convolution engine
+    convolutionEngine.process(context);
+}
+
+//==============================================================================
+bool TheKingsCabAudioProcessor::hasEditor() const
+{
+    return true; // (change this to false if you choose to not supply an editor)
+}
+
+juce::AudioProcessorEditor* TheKingsCabAudioProcessor::createEditor()
+{
+    return new TheKingsCabAudioProcessorEditor (*this);
+}
+
+//==============================================================================
+void TheKingsCabAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
+{
+    // Save the plugin state including loaded IRs and parameter values
+    auto state = valueTreeState.copyState();
+    
+    // Add IR file paths to state
+    auto irState = juce::ValueTree("IRFiles");
+    for (int i = 0; i < kNumIRSlots; ++i)
     {
-      float a = inA[i];
-      float bS = inB ? inB[i] : 0.0f;
-      if (invA) a = -a;
-      if (invB) bS = -bS;
-      const float aG = preA * wA * a;
-      const float bG = preB * wB * bS;
-      // Meter should reflect post-gain per input regardless of blend
-      const float aMeter = preA * a;
-      const float bMeter = preB * bS;
-      outCh[i] = aG + bG;
-
-      const float absA = std::abs(a);
-      const float absBv = std::abs(bS);
-      if (absA > peakA) peakA = absA;
-      if (absBv > peakB) peakB = absBv;
-      const float absAG = std::abs(aMeter);
-      const float absBG = std::abs(bMeter);
-      if (absAG > peakAGain) peakAGain = absAG;
-      if (absBG > peakBGain) peakBGain = absBG;
-      sumSqA += (double)aMeter * (double)aMeter;
-      sumSqB += (double)bMeter * (double)bMeter;
+        auto irFile = irManager.getLoadedIR(i);
+        if (irFile.existsAsFile())
+        {
+            auto irSlot = juce::ValueTree("Slot" + juce::String(i));
+            irSlot.setProperty("path", irFile.getFullPathName(), nullptr);
+            irState.appendChild(irSlot, nullptr);
+        }
     }
-  }
+    state.appendChild(irState, nullptr);
 
-  // Slower peak hold with gentle fall
-  const float fall = 0.995f; // gentle fall per timer tick (~30 Hz)
-  const int holdTicksMax = 75; // ~2.5 sec hold at 30 Hz
-
-  float curA = inputAPeak.load();
-  float curB = inputBPeak.load();
-  if (peakAGain > curA) { inputAPeak.store(peakAGain); peakAHoldTicks.store(holdTicksMax); }
-  else {
-    int h = peakAHoldTicks.load();
-    if (h > 0) peakAHoldTicks.store(h - 1);
-    else inputAPeak.store(curA * fall);
-  }
-  if (peakBGain > curB) { inputBPeak.store(peakBGain); peakBHoldTicks.store(holdTicksMax); }
-  else {
-    int h = peakBHoldTicks.load();
-    if (h > 0) peakBHoldTicks.store(h - 1);
-    else inputBPeak.store(curB * fall);
-  }
-
-  // RMS rolling (per block)
-  const float rmsA = std::sqrt((float)(sumSqA / juce::jmax(1, numSamples)));
-  const float rmsB = std::sqrt((float)(sumSqB / juce::jmax(1, numSamples)));
-  lastRmsA.store(rmsA);
-  lastRmsB.store(rmsB);
-  // EWMA smoothing (~1s at 30 Hz): alpha ~ 1 - exp(-dt/tau)
-  const float alpha = 0.05f;
-  ewmaRmsA.store(ewmaRmsA.load() * (1.0f - alpha) + rmsA * alpha);
-  ewmaRmsB.store(ewmaRmsB.load() * (1.0f - alpha) + rmsB * alpha);
-  if (peakA >= 0.999f) inputAClip.store(20); else inputAClip.store(std::max(0, inputAClip.load() - 1));
-  if (peakB >= 0.999f) inputBClip.store(20); else inputBClip.store(std::max(0, inputBClip.load() - 1));
-}
-
-void CrossFXAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
-{
-  if (auto state = valueTreeState.copyState(); auto xml = state.createXml())
+    std::unique_ptr<juce::XmlElement> xml(state.createXml());
     copyXmlToBinary(*xml, destData);
 }
 
-void CrossFXAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
+void TheKingsCabAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-  if (auto xml = getXmlFromBinary(data, sizeInBytes))
-    valueTreeState.replaceState(juce::ValueTree::fromXml(*xml));
+    // Restore plugin state including IR files
+    std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
+
+    if (xmlState.get() != nullptr)
+    {
+        if (xmlState->hasTagName(valueTreeState.state.getType()))
+        {
+            auto state = juce::ValueTree::fromXml(*xmlState);
+            valueTreeState.replaceState(state);
+
+            // Restore IR files
+            auto irState = state.getChildWithName("IRFiles");
+            if (irState.isValid())
+            {
+                for (int i = 0; i < kNumIRSlots; ++i)
+                {
+                    auto irSlot = irState.getChildWithName("Slot" + juce::String(i));
+                    if (irSlot.isValid())
+                    {
+                        auto path = irSlot.getProperty("path").toString();
+                        if (path.isNotEmpty())
+                        {
+                            juce::File irFile(path);
+                            if (irFile.existsAsFile())
+                            {
+                                loadImpulseResponse(i, irFile);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
-juce::AudioProcessorEditor* CrossFXAudioProcessor::createEditor()
+//==============================================================================
+void TheKingsCabAudioProcessor::loadImpulseResponse(int slotIndex, const juce::File& irFile)
 {
-  return new CrossFXAudioProcessorEditor(*this);
+    DBG("=== AUDIO PROCESSOR loadImpulseResponse START ===");
+    DBG("Loading IR for slot " << slotIndex << ": " << irFile.getFullPathName());
+    
+    if (slotIndex >= 0 && slotIndex < kNumIRSlots)
+    {
+        DBG("Slot index valid, calling IRManager.loadIR...");
+        
+        // Load IR through manager and update convolution engine
+        if (irManager.loadIR(slotIndex, irFile))
+        {
+            DBG("IRManager.loadIR returned SUCCESS, getting buffer...");
+            auto irBuffer = irManager.getIRBuffer(slotIndex);
+            if (irBuffer != nullptr)
+            {
+                DBG("IR buffer obtained, loading into convolution engine...");
+                bool convolutionSuccess = convolutionEngine.loadImpulseResponse(slotIndex, *irBuffer);
+                DBG("Convolution engine loadImpulseResponse result: " << (convolutionSuccess ? "SUCCESS" : "FAILED"));
+                
+                if (convolutionSuccess)
+                {
+                    // Force immediate audio processing update
+                    DBG("Forcing immediate audio processing sync...");
+                    
+                    // Trigger a parameter update to force audio engine refresh
+                    auto* gainParam = valueTreeState.getParameter("slot" + juce::String(slotIndex) + "_gain");
+                    if (gainParam)
+                    {
+                        // Briefly modify and restore gain to force processing update
+                        float currentGain = gainParam->getValue();
+                        gainParam->setValueNotifyingHost(currentGain + 0.001f);
+                        gainParam->setValueNotifyingHost(currentGain);
+                        DBG("Forced parameter refresh completed");
+                    }
+                }
+            }
+            else
+            {
+                DBG("ERROR: IR buffer is null after successful IRManager.loadIR!");
+            }
+        }
+        else
+        {
+            DBG("ERROR: IRManager.loadIR returned FAILURE for slot " << slotIndex);
+        }
+    }
+    else
+    {
+        DBG("ERROR: Invalid slot index " << slotIndex << " (must be 0-" << (kNumIRSlots-1) << ")");
+    }
+    
+    DBG("=== AUDIO PROCESSOR loadImpulseResponse END ===");
 }
 
-CrossFXAudioProcessor::APVTS::ParameterLayout CrossFXAudioProcessor::createParameterLayout()
+void TheKingsCabAudioProcessor::clearImpulseResponse(int slotIndex)
 {
-  std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
-
-  // Rollback: no alignment parameters in this safe point
-
-  // Core blend controls next
-  params.push_back(std::make_unique<juce::AudioParameterFloat>(
-    juce::ParameterID{"blend", 1}, "Blend",
-    juce::NormalisableRange<float>{ 0.0f, 1.0f, 0.0001f }, 0.0f));
-  params.push_back(std::make_unique<juce::AudioParameterFloat>(
-    juce::ParameterID{"gainA", 1}, "Gain A",
-    juce::NormalisableRange<float>{ -24.0f, 24.0f, 0.01f }, 0.0f,
-    juce::AudioParameterFloatAttributes().withLabel("dB")));
-  params.push_back(std::make_unique<juce::AudioParameterFloat>(
-    juce::ParameterID{"gainB", 1}, "Gain B",
-    juce::NormalisableRange<float>{ -24.0f, 24.0f, 0.01f }, 0.0f,
-    juce::AudioParameterFloatAttributes().withLabel("dB")));
-  params.push_back(std::make_unique<juce::AudioParameterChoice>(
-    juce::ParameterID{"fadeMode", 1}, "Fade",
-    juce::StringArray{ "Linear", "Smooth", "EqualPower" }, 2));
-
-  return { params.begin(), params.end() };
+    if (slotIndex >= 0 && slotIndex < kNumIRSlots)
+    {
+        irManager.clearIR(slotIndex);
+        convolutionEngine.clearImpulseResponse(slotIndex);
+    }
 }
 
-// JUCE factory
+//==============================================================================
+juce::AudioProcessorValueTreeState::ParameterLayout TheKingsCabAudioProcessor::createParameterLayout()
+{
+    std::vector<std::unique_ptr<juce::RangedAudioParameter>> parameters;
+
+    // Master controls
+    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "master_gain", "Master Gain", 
+        juce::NormalisableRange<float>(0.0f, 2.0f, 0.01f), 1.0f));
+
+    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "master_mix", "Dry/IR Mix", 
+        juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f), 1.0f));
+
+    // IR slot parameters
+    for (int i = 0; i < kNumIRSlots; ++i)
+    {
+        auto slotPrefix = "slot" + juce::String(i) + "_";
+
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            slotPrefix + "gain", "Slot " + juce::String(i + 1) + " Gain",
+            juce::NormalisableRange<float>(0.0f, 2.0f, 0.01f), 1.0f));
+
+        parameters.push_back(std::make_unique<juce::AudioParameterBool>(
+            slotPrefix + "mute", "Slot " + juce::String(i + 1) + " Mute", false));
+
+        parameters.push_back(std::make_unique<juce::AudioParameterBool>(
+            slotPrefix + "solo", "Slot " + juce::String(i + 1) + " Solo", false));
+
+        parameters.push_back(std::make_unique<juce::AudioParameterBool>(
+            slotPrefix + "phase", "Slot " + juce::String(i + 1) + " Phase Invert", false));
+
+
+    }
+
+    return { parameters.begin(), parameters.end() };
+}
+
+//==============================================================================
+// This creates new instances of the plugin..
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-  return new CrossFXAudioProcessor();
+    return new TheKingsCabAudioProcessor();
 }
-
-void CrossFXAudioProcessor::timerCallback()
-{
-  // Reduce meter values when no audio is present, so meters fall back to zero
-  decayMeters(0.9f);
-}
-
-void CrossFXAudioProcessor::decayMeters(float factor)
-{
-  inputAPeak.store(inputAPeak.load() * factor);
-  inputBPeak.store(inputBPeak.load() * factor);
-  inputAClip.store(std::max(0, inputAClip.load() - 1));
-  inputBClip.store(std::max(0, inputBClip.load() - 1));
-}
-
-void CrossFXAudioProcessor::autoGainMatchToEqual()
-{
-  // Peak-match: adjust Gain B so peak B matches peak A (post-gain)
-  const float peakA = inputAPeak.load();
-  const float peakB = inputBPeak.load();
-  if (peakA <= 0.0f || peakB <= 0.0f)
-    return;
-
-  const float deltaDb = juce::Decibels::gainToDecibels(peakA) - juce::Decibels::gainToDecibels(peakB);
-  const float currentDb = gainBParam->load();
-  // Apply full correction in one press, clamped to slider bounds
-  const float newDb = juce::jlimit(-24.0f, 24.0f, currentDb + deltaDb);
-  valueTreeState.getParameter("gainB")->beginChangeGesture();
-  valueTreeState.getParameter("gainB")->setValueNotifyingHost((newDb + 24.0f) / 48.0f);
-  valueTreeState.getParameter("gainB")->endChangeGesture();
-}
-
-// Rollback: no alignment helpers
-
-

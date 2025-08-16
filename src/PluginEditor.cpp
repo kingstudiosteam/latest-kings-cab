@@ -1,204 +1,573 @@
-#include "PluginEditor.h"
 #include "PluginProcessor.h"
-#include <BinaryData.h>
+#include "PluginEditor.h"
 
-CrossFXAudioProcessorEditor::CrossFXAudioProcessorEditor(CrossFXAudioProcessor& p)
-  : juce::AudioProcessorEditor(&p), audioProcessor(p)
+//==============================================================================
+TheKingsCabAudioProcessorEditor::TheKingsCabAudioProcessorEditor(TheKingsCabAudioProcessor& p)
+    : AudioProcessorEditor(&p), audioProcessor(p)
 {
-  setSize(560, 300);
-  setLookAndFeel(&lnF);
-  startTimerHz(30);
+    setupComponents();
+    setLookAndFeel(&kingsCabLookAndFeel);
+    
+    // Set fixed window size for luxury, professional appearance
+    setSize(kWindowWidth, kWindowHeight);
+    setResizable(false, false); // Disable resizing to prevent layout stretching
+    
+    // Initialize IR folder data
+    initializeIRData();
+    
+    // Start timer for UI updates
+    startTimerHz(30); // 30 FPS for smooth UI updates
+}
 
-  // Load logo if present
-  {
-    juce::File logoFile(juce::File::getSpecialLocation(juce::File::userHomeDirectory)
-                          .getChildFile("Dev/CrossFX/assets/multiblend_logo.png"));
-    if (logoFile.existsAsFile())
+TheKingsCabAudioProcessorEditor::~TheKingsCabAudioProcessorEditor()
+{
+    setLookAndFeel(nullptr);
+}
+
+//==============================================================================
+void TheKingsCabAudioProcessorEditor::setupComponents()
+{
+        // Load custom background image if available
+    loadCustomBackground();
+    
+    // Load header background image
+    loadHeaderBackground();
+    
+    // Load main body background image
+    loadMainBodyBackground();
+
+    // Master controls setup
+    masterGainSlider = std::make_unique<juce::Slider>(juce::Slider::RotaryHorizontalVerticalDrag,
+                                                      juce::Slider::NoTextBox);
+    masterGainSlider->setRange(0.0, 2.0, 0.01);
+    masterGainSlider->setValue(1.0);
+    masterGainSlider->addListener(this);
+    addAndMakeVisible(*masterGainSlider);
+
+    masterMixSlider = std::make_unique<juce::Slider>(juce::Slider::RotaryHorizontalVerticalDrag,
+                                                     juce::Slider::NoTextBox);
+    masterMixSlider->setRange(0.0, 1.0, 0.01);
+    masterMixSlider->setValue(1.0);
+    masterMixSlider->addListener(this);
+    addAndMakeVisible(*masterMixSlider);
+
+    masterGainLabel = std::make_unique<juce::Label>("GainLabel", "MASTER");
+    masterGainLabel->setFont(juce::Font(11.0f).boldened());
+    masterGainLabel->setJustificationType(juce::Justification::centred);
+    masterGainLabel->setColour(juce::Label::textColourId, 
+                              kingsCabLookAndFeel.findColour(KingsCabLookAndFeel::primaryTextColourId));
+    addAndMakeVisible(*masterGainLabel);
+
+    masterMixLabel = std::make_unique<juce::Label>("MixLabel", "DRY/IR");
+    masterMixLabel->setFont(juce::Font(11.0f).boldened());
+    masterMixLabel->setJustificationType(juce::Justification::centred);
+    masterMixLabel->setColour(juce::Label::textColourId, 
+                             kingsCabLookAndFeel.findColour(KingsCabLookAndFeel::primaryTextColourId));
+    addAndMakeVisible(*masterMixLabel);
+
+    // Create parameter attachments for master controls
+    masterGainAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.getValueTreeState(), "master_gain", *masterGainSlider);
+    
+    masterMixAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.getValueTreeState(), "master_mix", *masterMixSlider);
+
+    // Setup IR slots
+    setupIRSlots();
+
+    // Folder browser removed - each IR slot has its own dropdowns
+
+    // Footer components
+
+    statusLabel = std::make_unique<juce::Label>("Status", "Ready");
+    statusLabel->setFont(juce::Font(10.0f));
+    statusLabel->setJustificationType(juce::Justification::centredRight);
+    statusLabel->setColour(juce::Label::textColourId, 
+                          kingsCabLookAndFeel.findColour(KingsCabLookAndFeel::secondaryTextColourId));
+    addAndMakeVisible(*statusLabel);
+
+    // King Studios store link - larger and more prominent
+    storeLink = std::make_unique<juce::HyperlinkButton>("Visit King Studios Store", 
+                                                        juce::URL("https://www.kingstudiospa.com/store"));
+    storeLink->setFont(juce::Font(14.0f).boldened(), false);
+    storeLink->setJustificationType(juce::Justification::centred);
+    storeLink->setColour(juce::HyperlinkButton::textColourId, 
+                        kingsCabLookAndFeel.findColour(KingsCabLookAndFeel::goldHighlightColourId));
+    addAndMakeVisible(*storeLink);
+}
+
+void TheKingsCabAudioProcessorEditor::setupIRSlots()
+{
+    for (int i = 0; i < TheKingsCabAudioProcessor::kNumIRSlots; ++i)
     {
-      auto stream = logoFile.createInputStream();
-      if (stream != nullptr)
-        logoImage = juce::PNGImageFormat::loadFrom(*stream);
+        irSlots[i] = std::make_unique<IRSlot>(i, audioProcessor.getValueTreeState());
+        
+        // Setup callbacks
+        irSlots[i]->onIRSelected = [this](int slotIndex, const juce::File& irFile) {
+            onIRSelected(slotIndex, irFile);
+        };
+        
+        irSlots[i]->onIRCleared = [this](int slotIndex) {
+            onIRCleared(slotIndex);
+        };
+        
+        addAndMakeVisible(*irSlots[i]);
     }
-    if (! logoImage.isValid())
+}
+
+//==============================================================================
+void TheKingsCabAudioProcessorEditor::paint(juce::Graphics& g)
+{
+    drawBackground(g);
+    
+    auto bounds = getLocalBounds();
+    
+    // Draw sections
+    drawHeader(g, bounds.removeFromTop(kHeaderHeight));
+    drawFooter(g, bounds.removeFromBottom(kFooterHeight));
+}
+
+void TheKingsCabAudioProcessorEditor::resized()
+{
+    auto bounds = getLocalBounds();
+    
+    // Header section (no logo - clean space)
+    bounds.removeFromTop(kHeaderHeight); // Header space (no logo currently)
+    
+    // Footer section
+    auto footerBounds = bounds.removeFromBottom(kFooterHeight);
+    footerBounds.reduce(8, 4);
+    
+    // Status in small corner (minimal space)
+    auto statusArea = footerBounds.removeFromRight(60);
+    statusLabel->setBounds(statusArea);
+    
+    // Store link centered in remaining space
+    storeLink->setBounds(footerBounds);
+    
+    // Main content area
+    bounds.reduce(8, 8);
+    
+    // No folder browser needed - using individual slot dropdowns
+    
+    // Master controls removed - hide them and use more space for IR slots
+    masterGainSlider->setVisible(false);
+    masterGainLabel->setVisible(false);
+    masterMixSlider->setVisible(false);
+    masterMixLabel->setVisible(false);
+    bounds.removeFromTop(10); // Small top margin
+    
+    // Compact IR slots in 2x3 grid - positioned relative to remaining bounds  
+    auto slotsArea = bounds;
+    
+    // Calculate slot width - make them wide enough with a reasonable gap
+    auto slotWidth = (slotsArea.getWidth() * 0.45); // Each slot takes 45% of width, leaving 10% gap in center
+    auto slotHeight = (slotsArea.getHeight() - kSlotSpacing * 2) / 3; // Dynamic height for 500px body
+    
+    for (int row = 0; row < 3; ++row)
     {
-      if (BinaryData::multiblend_logo_pngSize > 0)
-        logoImage = juce::ImageFileFormat::loadFrom(BinaryData::multiblend_logo_png,
-                                                    (size_t) BinaryData::multiblend_logo_pngSize);
+        for (int col = 0; col < 2; ++col)
+        {
+            int slotIndex = row * 2 + col;
+            if (slotIndex < TheKingsCabAudioProcessor::kNumIRSlots)
+            {
+                // Configure right alignment for right column slots
+                irSlots[slotIndex]->setRightAligned(col == 1);
+                
+                // Perfect symmetry - left edge and right edge alignment
+                int slotX;
+                if (col == 0)
+                {
+                    // Left column: align to left edge (small margin from edge)
+                    slotX = slotsArea.getX() + 10;
+                }
+                else
+                {
+                    // Right column: align to right edge (slot ends at right edge with small margin)
+                    slotX = slotsArea.getRight() - slotWidth - 10;
+                }
+                
+                auto slotBounds = juce::Rectangle<int>(
+                    slotX,
+                    slotsArea.getY() + row * (slotHeight + kSlotSpacing),
+                    slotWidth,
+                    slotHeight
+                );
+                
+
+                irSlots[slotIndex]->setBounds(slotBounds);
+            }
+        }
     }
-  }
-
-  auto setupSlider = [](juce::Slider& s, juce::Slider::SliderStyle style)
-  {
-    s.setSliderStyle(style);
-    s.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 18);
-  };
-
-  setupSlider(blendSlider, juce::Slider::LinearHorizontal);
-  gainASlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-  gainASlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 18);
-  gainBSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-  gainBSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 18);
-  // Set rotary parameters so 12 o'clock is unity (0 dB)
-  const float mid = juce::MathConstants<float>::pi * 1.5f; // 270° => 12 o'clock in JUCE
-  const float sweep = juce::MathConstants<float>::pi * 1.5f;     // 270° total sweep
-  const float start = mid - sweep * 0.5f; // centered around up
-  const float end   = mid + sweep * 0.5f;
-  gainASlider.setRotaryParameters(start, end, true);
-  gainBSlider.setRotaryParameters(start, end, true);
-
-  addAndMakeVisible(blendSlider);
-  addAndMakeVisible(gainASlider);
-  addAndMakeVisible(gainBSlider);
-  addAndMakeVisible(fadeModeBox);
-  addAndMakeVisible(autoGainButton);
-  addAndMakeVisible(dbALabel);
-  addAndMakeVisible(dbBLabel);
-
-  // Populate fade mode choices (ensure visible on all hosts)
-  fadeModeBox.clear(juce::dontSendNotification);
-  fadeModeBox.addItem("Linear", 1);
-  fadeModeBox.addItem("Smooth", 2);
-  fadeModeBox.addItem("EqualPower", 3);
-
-  auto& vts = audioProcessor.getValueTreeState();
-  blendAttachment = std::make_unique<juce::SliderParameterAttachment>(*vts.getParameter("blend"), blendSlider);
-  gainAAttachment = std::make_unique<juce::SliderParameterAttachment>(*vts.getParameter("gainA"), gainASlider);
-  gainBAttachment = std::make_unique<juce::SliderParameterAttachment>(*vts.getParameter("gainB"), gainBSlider);
-  fadeModeAttachment  = std::make_unique<juce::ComboBoxParameterAttachment>(*vts.getParameter("fadeMode"), fadeModeBox);
-  autoGainButton.onClick = [this]{ audioProcessor.autoGainMatchToEqual(); };
-  dbALabel.setJustificationType(juce::Justification::centred);
-  dbALabel.setColour(juce::Label::textColourId, juce::Colours::white);
-  dbBLabel.setJustificationType(juce::Justification::centred);
-  dbBLabel.setColour(juce::Label::textColourId, juce::Colours::white);
-
-  // Rollback: no alignment controls
 }
 
-void CrossFXAudioProcessorEditor::paint(juce::Graphics& g)
+//==============================================================================
+void TheKingsCabAudioProcessorEditor::timerCallback()
 {
-  g.fillAll(juce::Colour(0xff1a1a1a));
-  g.setColour(juce::Colours::white);
-  g.setFont(16.0f);
-  // Remove title text; logo serves as brand/title
-  if (logoImage.isValid())
-  {
-    auto panel = juce::Rectangle<float>(10, 48, (float)getWidth()-20, 130.0f);
-    lnF.drawBevelPanel(g, panel, 10.0f, false);
-    // Center the logo within the full panel area (no right-side reservation)
-    auto logoBounds = juce::Rectangle<int>( (int)panel.getX() + 8, (int)panel.getY() + 8,
-                                            (int)panel.getWidth() - 16, (int)panel.getHeight() - 16 );
-    g.drawImageWithin(logoImage, logoBounds.getX(), logoBounds.getY(), logoBounds.getWidth(), logoBounds.getHeight(), juce::RectanglePlacement::centred);
-  }
-  g.setFont(12.0f);
-  // Place A/B labels tight to the slider ends
-  auto sliderBounds = blendSlider.getBounds();
-  g.drawText("A", sliderBounds.getX() - 18, sliderBounds.getY() - 8, 18, 16, juce::Justification::centredRight);
-  g.drawText("B", sliderBounds.getRight() + 2, sliderBounds.getY() - 8, 18, 16, juce::Justification::centredLeft);
-
-  auto meterArea = getLocalBounds().reduced(12).removeFromBottom(140);
-  const int meterWidth = 56;
-  const int meterGap = 40;
-  int cx = meterArea.getCentreX();
-  auto meterA = juce::Rectangle<int>(cx - meterGap/2 - meterWidth, meterArea.getY() + 10, meterWidth, meterArea.getHeight() - 20);
-  auto meterB = juce::Rectangle<int>(cx + meterGap/2,           meterArea.getY() + 10, meterWidth, meterArea.getHeight() - 20);
-  // Beveled meter panels
-  lnF.drawBevelPanel(g, meterA.toFloat().expanded(6), 6.0f, true);
-  lnF.drawBevelPanel(g, meterB.toFloat().expanded(6), 6.0f, true);
-  // Rollback: no alignment panel
-  drawMeterTicks(g, meterA);
-  drawMeterTicks(g, meterB);
-  drawMeter(g, meterA, audioProcessor.getInputAPeak(), audioProcessor.getInputAClipped() ? juce::Colours::red : juce::Colours::lightgreen);
-  drawMeter(g, meterB, audioProcessor.getInputBPeak(), audioProcessor.getInputBClipped() ? juce::Colours::red : juce::Colours::orange);
-  g.drawText("A", meterA.withHeight(20).translated(0, -18), juce::Justification::centred);
-  g.drawText("B", meterB.withHeight(20).translated(0, -18), juce::Justification::centred);
+    updateStatusDisplay();
+    
+    // IR slots will get folder data directly from IRManager
 }
 
-void CrossFXAudioProcessorEditor::resized()
+void TheKingsCabAudioProcessorEditor::sliderValueChanged(juce::Slider* slider)
 {
-  auto area = getLocalBounds().reduced(12);
-  auto top = area.removeFromTop(110);
-  auto blendArea = top.removeFromLeft(area.getWidth() - 220).reduced(10, 28);
-  blendSlider.setBounds(blendArea);
-  // Place Fade dropdown on the right side, below the Auto Gain button, not overlapping anything
-  {
-    const int rightMargin = 12;
-    const int fadeWidth = 180;
-    const int fadeHeight = 24;
-    const int fadeX = getWidth() - rightMargin - fadeWidth;
-    const int fadeY = 56; // below top-right button (which sits at y=12, h=28)
-    auto fadeArea = juce::Rectangle<int>(fadeX, fadeY, fadeWidth, fadeHeight);
-    fadeModeBox.setBounds(fadeArea);
-    // Label under dropdown
-    auto* fadeLabel = dynamic_cast<juce::Label*>(findChildWithID("fadeLabel"));
-    if (fadeLabel == nullptr)
+    juce::ignoreUnused(slider);
+    // Parameter attachments handle the updates automatically
+}
+
+//==============================================================================
+
+
+void TheKingsCabAudioProcessorEditor::updateStatusDisplay()
+{
+    // Count loaded IRs
+    int loadedCount = 0;
+    for (const auto& slot : irSlots)
     {
-      auto lbl = std::make_unique<juce::Label>();
-      lbl->setComponentID("fadeLabel");
-      lbl->setText("Fade Type", juce::dontSendNotification);
-      lbl->setJustificationType(juce::Justification::centred);
-      lbl->setColour(juce::Label::textColourId, juce::Colours::white);
-      addAndMakeVisible(lbl.get());
-      lbl.release();
+        if (slot->isActive())
+            loadedCount++;
     }
-    if (auto* lbl = dynamic_cast<juce::Label*>(findChildWithID("fadeLabel")))
-      lbl->setBounds(fadeArea.translated(0, fadeHeight + 2).withHeight(18));
-  }
-
-  auto knobRow = area.removeFromBottom(160);
-  auto leftKnob = knobRow.removeFromLeft(120).reduced(10);
-  auto rightKnob = knobRow.removeFromRight(120).reduced(10);
-  // Reserve space above knobs for dB labels
-  auto leftLabel = leftKnob.removeFromTop(24);
-  auto rightLabel = rightKnob.removeFromTop(24);
-  dbALabel.setBounds(leftLabel);
-  dbBLabel.setBounds(rightLabel);
-  gainASlider.setBounds(leftKnob);
-  gainBSlider.setBounds(rightKnob);
-
-  // Rollback: no alignment layout
-
-  // Position Auto Gain button at top-right, away from the centered logo panel and fade dropdown
-  auto btnBounds = juce::Rectangle<int>(getWidth() - 120, 12, 100, 28);
-  autoGainButton.setBounds(btnBounds);
+    
+    juce::String status = juce::String(loadedCount) + "/" + 
+                         juce::String(TheKingsCabAudioProcessor::kNumIRSlots) + " IRs loaded";
+    statusLabel->setText(status, juce::dontSendNotification);
 }
 
-void CrossFXAudioProcessorEditor::timerCallback()
+void TheKingsCabAudioProcessorEditor::loadCustomBackground()
 {
-  repaint();
-  // Update dB labels (post-gain peaks)
-  dbALabel.setText(juce::String(audioProcessor.getInputAdB(), 1) + " dB", juce::dontSendNotification);
-  dbBLabel.setText(juce::String(audioProcessor.getInputBdB(), 1) + " dB", juce::dontSendNotification);
+    // Try to load custom background image (840x620 pixels)
+    juce::File backgroundFile("/Users/justinmitchell/cursorfiles/cursorfiles/assets/custom_background.png");
+    
+    // Also try relative paths
+    if (!backgroundFile.existsAsFile())
+    {
+        backgroundFile = juce::File::getCurrentWorkingDirectory()
+                              .getChildFile("assets")
+                              .getChildFile("custom_background.png");
+    }
+    
+        if (backgroundFile.existsAsFile())
+    {
+        customBackgroundImage = juce::ImageFileFormat::loadFrom(backgroundFile);
+        if (customBackgroundImage.isValid())
+        {
+            DBG("Custom background loaded: " << backgroundFile.getFullPathName());
+            DBG("Background size: " << customBackgroundImage.getWidth() << "x" << customBackgroundImage.getHeight());
+        }
+        else
+        {
+            DBG("Failed to load custom background image");
+        }
+    }
+    else
+    {
+        DBG("No custom background found (looking for: custom_background.png)");
+    }
 }
 
-void CrossFXAudioProcessorEditor::drawMeter(juce::Graphics& g, juce::Rectangle<int> bounds, float peak, juce::Colour fill)
+void TheKingsCabAudioProcessorEditor::loadHeaderBackground()
 {
-  g.setColour(juce::Colours::black);
-  g.fillRect(bounds);
-  g.setColour(fill);
-  const int h = juce::jlimit(0, bounds.getHeight(), (int) std::round(peak * bounds.getHeight()));
-  g.fillRect(bounds.withY(bounds.getBottom() - h).withHeight(h));
-  g.setColour(juce::Colours::grey);
-  g.drawRect(bounds);
+    // Try multiple paths for header background image
+    juce::File headerFile;
+    
+    // Try absolute path first (most reliable for development)
+    headerFile = juce::File("/Users/justinmitchell/cursorfiles/cursorfiles/assets/kkheader.png");
+    
+    // If not found, try relative to current working directory
+    if (!headerFile.existsAsFile())
+    {
+        headerFile = juce::File::getCurrentWorkingDirectory()
+                        .getChildFile("assets")
+                        .getChildFile("kkheader.png");
+    }
+    
+    // Try relative to executable
+    if (!headerFile.existsAsFile())
+    {
+        headerFile = juce::File::getSpecialLocation(juce::File::currentExecutableFile)
+                        .getParentDirectory()
+                        .getChildFile("assets")
+                        .getChildFile("kkheader.png");
+    }
+    
+    if (headerFile.existsAsFile())
+    {
+        headerBackgroundImage = juce::ImageFileFormat::loadFrom(headerFile);
+        if (headerBackgroundImage.isValid())
+        {
+            DBG("Header background loaded: " << headerFile.getFullPathName());
+            DBG("Header size: " << headerBackgroundImage.getWidth() << "x" << headerBackgroundImage.getHeight());
+        }
+        else
+        {
+            DBG("Failed to load header background: " << headerFile.getFullPathName());
+        }
+    }
+    else
+    {
+        DBG("No header background found (looking for: kkheader.png)");
+    }
 }
 
-void CrossFXAudioProcessorEditor::drawMeterTicks(juce::Graphics& g, juce::Rectangle<int> bounds)
+void TheKingsCabAudioProcessorEditor::loadMainBodyBackground()
 {
-  // Draw -24, -12, -6, -3, 0 dB ticks (approximate linear mapping for simplicity)
-  g.setColour(juce::Colours::grey.withAlpha(0.5f));
-  auto drawTick = [&](float dB, int len)
-  {
-    // Approximate mapping: linear amplitude ~ 10^(dB/20)
-    float amp = std::pow(10.0f, dB / 20.0f);
-    int y = bounds.getBottom() - (int) std::round(amp * bounds.getHeight());
-    g.drawLine((float)bounds.getX(), (float)y, (float)bounds.getX() + (float)len, (float)y);
-  };
-  drawTick(-24.0f, 8);
-  drawTick(-12.0f, 10);
-  drawTick(-6.0f, 12);
-  drawTick(-3.0f, 12);
-  drawTick(0.0f, 14);
+    // Try multiple paths for main body background image
+    juce::File mainBodyFile;
+    
+    // Try absolute path first (most reliable for development)
+    mainBodyFile = juce::File("/Users/justinmitchell/cursorfiles/cursorfiles/assets/kkmain.png");
+    
+    // If not found, try relative to current working directory
+    if (!mainBodyFile.existsAsFile())
+    {
+        mainBodyFile = juce::File::getCurrentWorkingDirectory()
+                        .getChildFile("assets")
+                        .getChildFile("kkmain.png");
+    }
+    
+    // Try relative to executable
+    if (!mainBodyFile.existsAsFile())
+    {
+        mainBodyFile = juce::File::getSpecialLocation(juce::File::currentExecutableFile)
+                        .getParentDirectory()
+                        .getChildFile("assets")
+                        .getChildFile("kkmain.png");
+    }
+    
+    if (mainBodyFile.existsAsFile())
+    {
+        mainBodyBackgroundImage = juce::ImageFileFormat::loadFrom(mainBodyFile);
+        if (mainBodyBackgroundImage.isValid())
+        {
+            DBG("Main body background loaded: " << mainBodyFile.getFullPathName());
+            DBG("Main body size: " << mainBodyBackgroundImage.getWidth() << "x" << mainBodyBackgroundImage.getHeight());
+        }
+        else
+        {
+            DBG("Failed to load main body background: " << mainBodyFile.getFullPathName());
+        }
+    }
+    else
+    {
+        DBG("No main body background found (looking for: kkmain.png)");
+    }
 }
 
-// no XY pad in A/B mode
+void TheKingsCabAudioProcessorEditor::loadFooterBackground()
+{
+    // Try multiple paths for footer background image
+    juce::File footerFile;
+    
+    // Try absolute path first (most reliable for development)
+    footerFile = juce::File("/Users/justinmitchell/cursorfiles/cursorfiles/assets/kkfooter.png");
+    
+    // If not found, try relative to current working directory
+    if (!footerFile.existsAsFile())
+    {
+        footerFile = juce::File::getCurrentWorkingDirectory()
+                        .getChildFile("assets")
+                        .getChildFile("kkfooter.png");
+    }
+    
+    // Try relative to executable
+    if (!footerFile.existsAsFile())
+    {
+        footerFile = juce::File::getSpecialLocation(juce::File::currentExecutableFile)
+                        .getParentDirectory()
+                        .getChildFile("assets")
+                        .getChildFile("kkfooter.png");
+    }
+    
+    if (footerFile.existsAsFile())
+    {
+        footerBackgroundImage = juce::ImageFileFormat::loadFrom(footerFile);
+        if (footerBackgroundImage.isValid())
+        {
+            DBG("Footer background loaded: " << footerFile.getFullPathName());
+            DBG("Footer size: " << footerBackgroundImage.getWidth() << "x" << footerBackgroundImage.getHeight());
+        }
+        else
+        {
+            DBG("Failed to load footer background: " << footerFile.getFullPathName());
+        }
+    }
+    else
+    {
+        DBG("No footer background found (looking for: kkfooter.png)");
+    }
+}
 
+//==============================================================================
+void TheKingsCabAudioProcessorEditor::drawBackground(juce::Graphics& g)
+{
+    auto bounds = getLocalBounds().toFloat();
+    
+    // Check if custom background is available (full background override)
+    if (customBackgroundImage.isValid())
+    {
+        // Draw custom background image
+        g.drawImageAt(customBackgroundImage, 0, 0);
+        
+        // Optional: Add subtle overlay for text readability
+        g.setColour(juce::Colours::black.withAlpha(0.1f));
+        g.fillRect(bounds);
+    }
+    else
+    {
+        // Calculate areas for different background treatments
+        auto headerArea = bounds.removeFromTop(static_cast<float>(kHeaderHeight));
+        auto footerArea = bounds.removeFromBottom(static_cast<float>(kFooterHeight));
+        auto mainBodyArea = bounds; // Remaining area in the middle
+        
+        // Draw main body background image if available (840x500px area)
+        if (mainBodyBackgroundImage.isValid())
+        {
+            g.drawImage(mainBodyBackgroundImage, mainBodyArea, 
+                       juce::RectanglePlacement::stretchToFit, false);
+        }
+        else
+        {
+            // Fall back to luxury gradient background for main body
+            g.setGradientFill(juce::ColourGradient(
+                kingsCabLookAndFeel.findColour(KingsCabLookAndFeel::backgroundColourId).brighter(0.15f),
+                mainBodyArea.getTopLeft(),
+                kingsCabLookAndFeel.findColour(KingsCabLookAndFeel::backgroundColourId).darker(0.25f),
+                mainBodyArea.getBottomLeft(),
+                false));
+            g.fillRect(mainBodyArea);
+        }
+        
+        // Fill header area with base gradient (if no header image)
+        auto fullBounds = getLocalBounds().toFloat();
+        g.setGradientFill(juce::ColourGradient(
+            kingsCabLookAndFeel.findColour(KingsCabLookAndFeel::backgroundColourId).brighter(0.15f),
+            fullBounds.getTopLeft(),
+            kingsCabLookAndFeel.findColour(KingsCabLookAndFeel::backgroundColourId).darker(0.25f),
+            fullBounds.getBottomLeft(),
+            false));
+        g.fillRect(headerArea);
+        
+        // Footer area will be handled by drawFooter method
+        g.fillRect(footerArea);
+        
+        // Add radial highlight from center for depth
+        auto centerX = bounds.getCentreX();
+        auto centerY = bounds.getCentreY();
+        auto radius = juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.7f;
+        
+        g.setGradientFill(juce::ColourGradient(
+            juce::Colours::white.withAlpha(0.12f), centerX, centerY,
+            juce::Colours::transparentBlack, centerX, centerY + radius,
+            true));
+        g.fillRect(bounds);
+        
+        // Premium brushed metal texture with gold accents
+        g.setColour(kingsCabLookAndFeel.findColour(KingsCabLookAndFeel::metallicBaseColourId).withAlpha(0.08f));
+        for (int y = 0; y < getHeight(); y += 3)
+        {
+            g.drawHorizontalLine(y, 0.0f, static_cast<float>(getWidth()));
+        }
+        
+        // Gold accent lines removed for cleaner look
+        
+        // Premium border frame
+        g.setColour(kingsCabLookAndFeel.findColour(KingsCabLookAndFeel::goldHighlightColourId).withAlpha(0.7f));
+        g.drawRect(bounds, 3.0f);
+        
+        g.setColour(kingsCabLookAndFeel.findColour(KingsCabLookAndFeel::metallicHighlightColourId).withAlpha(0.5f));
+        g.drawRect(bounds.reduced(3.0f), 1.0f);
+        
+        // Subtle inner shadow for professional depth
+        auto shadowArea = bounds.reduced(4.0f);
+        g.setGradientFill(juce::ColourGradient(
+            juce::Colours::black.withAlpha(0.3f), shadowArea.getTopLeft(),
+            juce::Colours::transparentBlack, shadowArea.getTopLeft() + juce::Point<float>(0, 25),
+            false));
+        g.fillRect(shadowArea.removeFromTop(25));
+    }
+}
 
+void TheKingsCabAudioProcessorEditor::drawHeader(juce::Graphics& g, const juce::Rectangle<int>& bounds)
+{
+    auto floatBounds = bounds.toFloat();
+    
+    // Draw header background image if available
+    if (headerBackgroundImage.isValid())
+    {
+        // Draw the header image stretched to fit the header bounds
+        g.drawImage(headerBackgroundImage, floatBounds, 
+                   juce::RectanglePlacement::stretchToFit, false);
+    }
+    else
+    {
+        // Fallback: Luxury header background with enhanced metallic gradient
+        g.setGradientFill(juce::ColourGradient(
+            kingsCabLookAndFeel.findColour(KingsCabLookAndFeel::metallicHighlightColourId).brighter(0.2f),
+            floatBounds.getTopLeft(),
+            kingsCabLookAndFeel.findColour(KingsCabLookAndFeel::metallicBaseColourId).darker(0.1f),
+            floatBounds.getBottomLeft(),
+            false));
+        g.fillRect(floatBounds);
+        
+        // Enhanced glossy overlay for luxury finish
+        auto glossyArea = floatBounds.removeFromTop(floatBounds.getHeight() * 0.6f);
+        g.setGradientFill(juce::ColourGradient(
+            juce::Colours::white.withAlpha(0.25f), glossyArea.getTopLeft(),
+            juce::Colours::white.withAlpha(0.0f), glossyArea.getBottomLeft(),
+            false));
+        g.fillRect(glossyArea);
+    }
+}
+
+void TheKingsCabAudioProcessorEditor::drawFooter(juce::Graphics& g, const juce::Rectangle<int>& bounds)
+{
+    // Footer background - solid black
+    g.setColour(juce::Colour(0xff000000));
+    g.fillRect(bounds);
+}
+
+//==============================================================================
+void TheKingsCabAudioProcessorEditor::onIRSelected(int slotIndex, const juce::File& irFile)
+{
+    // Load IR into the audio processor
+    audioProcessor.loadImpulseResponse(slotIndex, irFile);
+    
+    // Update slot visual state
+    if (slotIndex >= 0 && slotIndex < TheKingsCabAudioProcessor::kNumIRSlots)
+    {
+        auto irInfo = IRManager::getIRInfo(irFile);
+        irSlots[slotIndex]->setLoadedIR(irInfo.folder, irInfo.name);
+    }
+}
+
+void TheKingsCabAudioProcessorEditor::onIRCleared(int slotIndex)
+{
+    // Clear IR from the audio processor
+    audioProcessor.clearImpulseResponse(slotIndex);
+}
+
+void TheKingsCabAudioProcessorEditor::initializeIRData()
+{
+    // Get folders from the IR Manager
+    auto folders = audioProcessor.getIRManager().getFolders();
+    
+    // Update status to show folder count for debugging
+    statusLabel->setText("Found " + juce::String(folders.size()) + " folders", juce::dontSendNotification);
+    
+    // Update all IR slots with folder data
+    for (auto& irSlot : irSlots)
+    {
+        if (irSlot)
+        {
+            irSlot->updateFolderList(folders);
+        }
+    }
+    
+    // No folder browser - slots get data directly
+}
+
+void TheKingsCabAudioProcessorEditor::onIRPreview(const IRManager::IRInfo& irInfo)
+{
+    juce::ignoreUnused(irInfo);
+    // Could implement IR preview/audition here in the future
+}
