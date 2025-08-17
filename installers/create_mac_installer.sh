@@ -10,7 +10,7 @@ echo "🎛️  Creating The King's Cab macOS Installer..."
 echo "=============================================="
 
 # Configuration
-PLUGIN_NAME="The King's Cab"
+PLUGIN_NAME="The Kings Cab"
 COMPANY_NAME="King Studios"
 VERSION="1.0.0"
 BUNDLE_ID="com.kingstudios.thekingscab"
@@ -64,26 +64,39 @@ else
     echo "⚠️  AAX plugin not found. Pro Tools support will be limited."
 fi
 
-# Copy IR Collections
-IR_SOURCE="/Users/justinmitchell/Desktop/KINGS CAB"
-if [ -d "${IR_SOURCE}" ]; then
-    echo "🎸 Copying IR Collections..."
-    cp -R "${IR_SOURCE}/"* "${PKG_DIR}/Users/Shared/King Studios/The Kings Cab/IR Collections/"
-    echo "✅ IR Collections copied successfully!"
-    echo "   Collections included:"
-    ls "${IR_SOURCE}" | sed 's/^/   • /'
+# Copy IR Collections (prefer repo-staged IRs; fallback to Desktop source)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+IR_SOURCE_REPO="${SCRIPT_DIR}/windows/ir_collections"
+IR_SOURCE_DESKTOP="/Users/justinmitchell/Desktop/KINGS CAB"
+if [ -d "${IR_SOURCE_REPO}" ]; then
+    echo "🎸 Copying IR Collections from repo staging..."
+    cp -R "${IR_SOURCE_REPO}/"* "${PKG_DIR}/Users/Shared/King Studios/The Kings Cab/IR Collections/"
+    echo "✅ IR Collections copied from repo!"
+elif [ -d "${IR_SOURCE_DESKTOP}" ]; then
+    echo "🎸 Copying IR Collections from Desktop..."
+    cp -R "${IR_SOURCE_DESKTOP}/"* "${PKG_DIR}/Users/Shared/King Studios/The Kings Cab/IR Collections/"
+    echo "✅ IR Collections copied from Desktop!"
 else
-    echo "❌ IR Collections not found at: ${IR_SOURCE}"
+    echo "❌ IR Collections not found in repo or Desktop."
     echo "   Plugin will work but won't have IR files loaded."
 fi
+
+# Copy PNG assets to shared assets folder for DAWs/Standalone
+mkdir -p "${PKG_DIR}/Users/Shared/King Studios/The Kings Cab/assets"
+ASSETS_ROOT="${SCRIPT_DIR}/../assets"
+for f in kkheader.png kkmain.png kkfooter.png custom_background.png; do
+  if [ -f "${ASSETS_ROOT}/${f}" ]; then
+    cp "${ASSETS_ROOT}/${f}" "${PKG_DIR}/Users/Shared/King Studios/The Kings Cab/assets/"
+  fi
+done
 
 # Create preinstall script
 cat > "${RESOURCES_DIR}/preinstall" << 'EOF'
 #!/bin/bash
 # Remove any existing installations
-rm -rf "/Library/Audio/Plug-Ins/VST3/The King's Cab.vst3"
-rm -rf "/Library/Audio/Plug-Ins/Components/The King's Cab.component"
-rm -rf "/Library/Application Support/Avid/Audio/Plug-Ins/The King's Cab.aaxplugin"
+rm -rf "/Library/Audio/Plug-Ins/VST3/The Kings Cab.vst3"
+rm -rf "/Library/Audio/Plug-Ins/Components/The Kings Cab.component"
+rm -rf "/Library/Application Support/Avid/Audio/Plug-Ins/The Kings Cab.aaxplugin"
 exit 0
 EOF
 
@@ -93,11 +106,11 @@ cat > "${RESOURCES_DIR}/postinstall" << 'EOF'
 echo "The King's Cab installation completed successfully!"
 
 # Set proper permissions for plugins
-chmod -R 755 "/Library/Audio/Plug-Ins/VST3/The King's Cab.vst3"
-chmod -R 755 "/Library/Audio/Plug-Ins/Components/The King's Cab.component"
+chmod -R 755 "/Library/Audio/Plug-Ins/VST3/The Kings Cab.vst3"
+chmod -R 755 "/Library/Audio/Plug-Ins/Components/The Kings Cab.component"
 
-if [ -d "/Library/Application Support/Avid/Audio/Plug-Ins/The King's Cab.aaxplugin" ]; then
-    chmod -R 755 "/Library/Application Support/Avid/Audio/Plug-Ins/The King's Cab.aaxplugin"
+if [ -d "/Library/Application Support/Avid/Audio/Plug-Ins/The Kings Cab.aaxplugin" ]; then
+    chmod -R 755 "/Library/Application Support/Avid/Audio/Plug-Ins/The Kings Cab.aaxplugin"
 fi
 
 # Set proper permissions for IR Collections
