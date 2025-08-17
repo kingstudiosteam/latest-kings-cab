@@ -26,19 +26,20 @@ Name: "{commoncf}\Avid\Audio\Plug-Ins"; Flags: uninsneveruninstall
 Name: "{commonappdata}\King Studios\The Kings Cab\IR Collections"; Flags: uninsalwaysuninstall
 
 [Files]
-Source: "build\TheKingsCab_artefacts\Release\VST3\The Kings Cab.vst3\*"; DestDir: "{commoncf}\VST3\The Kings Cab.vst3"; Flags: recursesubdirs ignoreversion
-Source: "build\TheKingsCab_artefacts\Release\AAX\The Kings Cab.aaxplugin\*"; DestDir: "{commoncf}\Avid\Audio\Plug-Ins\The Kings Cab.aaxplugin"; Flags: recursesubdirs ignoreversion
-Source: "build\TheKingsCab_artefacts\Release\Standalone\The Kings Cab.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "assets\kkheader.png"; DestDir: "{app}\assets"; Flags: ignoreversion
-Source: "assets\kkmain.png"; DestDir: "{app}\assets"; Flags: ignoreversion
-Source: "assets\kkfooter.png"; DestDir: "{app}\assets"; Flags: ignoreversion
-Source: "assets\custom_background.png"; DestDir: "{app}\assets"; Flags: ignoreversion
+; Use paths relative to script: {#SourcePath} points to installers\
+Source: "{#SourcePath}..\build\TheKingsCab_artefacts\Release\VST3\The Kings Cab.vst3\*"; DestDir: "{commoncf}\VST3\The Kings Cab.vst3"; Flags: recursesubdirs ignoreversion
+Source: "{#SourcePath}..\build\TheKingsCab_artefacts\Release\AAX\The Kings Cab.aaxplugin\*"; DestDir: "{commoncf}\Avid\Audio\Plug-Ins\The Kings Cab.aaxplugin"; Flags: recursesubdirs ignoreversion
+Source: "{#SourcePath}..\build\TheKingsCab_artefacts\Release\Standalone\The Kings Cab.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourcePath}..\assets\kkheader.png"; DestDir: "{app}\assets"; Flags: ignoreversion
+Source: "{#SourcePath}..\assets\kkmain.png"; DestDir: "{app}\assets"; Flags: ignoreversion
+Source: "{#SourcePath}..\assets\kkfooter.png"; DestDir: "{app}\assets"; Flags: ignoreversion
+Source: "{#SourcePath}..\assets\custom_background.png"; DestDir: "{app}\assets"; Flags: ignoreversion
 ; Also copy assets to ProgramData for DAWs
-Source: "assets\kkheader.png"; DestDir: "{commonappdata}\King Studios\The Kings Cab\assets"; Flags: ignoreversion
-Source: "assets\kkmain.png"; DestDir: "{commonappdata}\King Studios\The Kings Cab\assets"; Flags: ignoreversion
-Source: "assets\kkfooter.png"; DestDir: "{commonappdata}\King Studios\The Kings Cab\assets"; Flags: ignoreversion
-Source: "assets\custom_background.png"; DestDir: "{commonappdata}\King Studios\The Kings Cab\assets"; Flags: ignoreversion
-Source: "installers\windows\ir_collections\*"; DestDir: "{commonappdata}\King Studios\The Kings Cab\IR Collections"; Flags: recursesubdirs ignoreversion
+Source: "{#SourcePath}..\assets\kkheader.png"; DestDir: "{commonappdata}\King Studios\The Kings Cab\assets"; Flags: ignoreversion
+Source: "{#SourcePath}..\assets\kkmain.png"; DestDir: "{commonappdata}\King Studios\The Kings Cab\assets"; Flags: ignoreversion
+Source: "{#SourcePath}..\assets\kkfooter.png"; DestDir: "{commonappdata}\King Studios\The Kings Cab\assets"; Flags: ignoreversion
+Source: "{#SourcePath}..\assets\custom_background.png"; DestDir: "{commonappdata}\King Studios\The Kings Cab\assets"; Flags: ignoreversion
+Source: "{#SourcePath}windows\ir_collections\*"; DestDir: "{commonappdata}\King Studios\The Kings Cab\IR Collections"; Flags: recursesubdirs ignoreversion
 
 [Icons]
 Name: "{autoprograms}\King Studios\The Kings Cab (Standalone)"; Filename: "{app}\The Kings Cab.exe"
