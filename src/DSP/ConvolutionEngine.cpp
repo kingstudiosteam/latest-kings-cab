@@ -192,6 +192,19 @@ bool ConvolutionEngine::loadImpulseResponse(int slotIndex, const juce::AudioBuff
         slot.convolution->reset();
         slot.convolution->prepare(juce::dsp::ProcessSpec{currentSampleRate, static_cast<juce::uint32>(currentBlockSize), 2});
         
+        // Ensure immediate, non-faded activation for this slot
+        slot.gainSmoother.setCurrentAndTargetValue(slot.gain.load());
+        
+        // Prime the convolution to avoid first-block silence after load
+        {
+            const int warmupSamples = juce::jmax(currentBlockSize, 512);
+            juce::AudioBuffer<float> warmupBuffer(2, warmupSamples);
+            warmupBuffer.clear();
+            juce::dsp::AudioBlock<float> warmBlock(warmupBuffer);
+            juce::dsp::ProcessContextReplacing<float> warmCtx(warmBlock);
+            slot.convolution->process(warmCtx);
+        }
+        
         DBG("Convolution forced to active state");
         slot.hasIR.store(true);
         DBG("=== CONVOLUTION ENGINE loadImpulseResponse SUCCESS ===");

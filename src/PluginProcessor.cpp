@@ -308,9 +308,14 @@ void TheKingsCabAudioProcessor::loadImpulseResponse(int slotIndex, const juce::F
                     {
                         // Briefly modify and restore gain to force processing update
                         float currentGain = gainParam->getValue();
-                        gainParam->setValueNotifyingHost(currentGain + 0.001f);
+                        gainParam->setValueNotifyingHost(currentGain + 0.01f);
                         gainParam->setValueNotifyingHost(currentGain);
                         DBG("Forced parameter refresh completed");
+                    }
+                    else
+                    {
+                        // As a fallback, reset the engine smoothers immediately
+                        convolutionEngine.setSlotGain(slotIndex, 1.0f);
                     }
                 }
             }
