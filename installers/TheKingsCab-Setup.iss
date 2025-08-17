@@ -43,9 +43,7 @@ Source: "{#SourcePath}..\assets\kkheader.png"; DestDir: "{commonappdata}\King St
 Source: "{#SourcePath}..\assets\kkmain.png"; DestDir: "{commonappdata}\King Studios\The Kings Cab\assets"; Flags: ignoreversion
 Source: "{#SourcePath}..\assets\kkfooter.png"; DestDir: "{commonappdata}\King Studios\The Kings Cab\assets"; Flags: ignoreversion
 Source: "{#SourcePath}..\assets\custom_background.png"; DestDir: "{commonappdata}\King Studios\The Kings Cab\assets"; Flags: ignoreversion
-#ifexist "{#SourcePath}windows\ir_collections\"
 Source: "{#SourcePath}windows\ir_collections\*"; DestDir: "{commonappdata}\King Studios\The Kings Cab\IR Collections"; Flags: recursesubdirs ignoreversion
-#endif
 
 [Icons]
 Name: "{autoprograms}\King Studios\The Kings Cab (Standalone)"; Filename: "{app}\The Kings Cab.exe"
