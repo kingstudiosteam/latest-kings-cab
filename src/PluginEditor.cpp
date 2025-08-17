@@ -239,6 +239,17 @@ void TheKingsCabAudioProcessorEditor::loadCustomBackground()
     juce::File backgroundFile = juce::File::getCurrentWorkingDirectory()
                               .getChildFile("assets")
                               .getChildFile("custom_background.png");
+
+   #if JUCE_WINDOWS
+    if (!backgroundFile.existsAsFile())
+    {
+        backgroundFile = juce::File::getSpecialLocation(juce::File::commonApplicationDataDirectory)
+                              .getChildFile("King Studios")
+                              .getChildFile("The Kings Cab")
+                              .getChildFile("assets")
+                              .getChildFile("custom_background.png");
+    }
+   #endif
     
         if (backgroundFile.existsAsFile())
     {
@@ -268,6 +279,17 @@ void TheKingsCabAudioProcessorEditor::loadHeaderBackground()
     headerFile = juce::File::getCurrentWorkingDirectory()
                     .getChildFile("assets")
                     .getChildFile("kkheader.png");
+
+   #if JUCE_WINDOWS
+    if (!headerFile.existsAsFile())
+    {
+        headerFile = juce::File::getSpecialLocation(juce::File::commonApplicationDataDirectory)
+                        .getChildFile("King Studios")
+                        .getChildFile("The Kings Cab")
+                        .getChildFile("assets")
+                        .getChildFile("kkheader.png");
+    }
+   #endif
     
     // Try relative to executable
     if (!headerFile.existsAsFile())
@@ -306,6 +328,17 @@ void TheKingsCabAudioProcessorEditor::loadMainBodyBackground()
     mainBodyFile = juce::File::getCurrentWorkingDirectory()
                     .getChildFile("assets")
                     .getChildFile("kkmain.png");
+
+   #if JUCE_WINDOWS
+    if (!mainBodyFile.existsAsFile())
+    {
+        mainBodyFile = juce::File::getSpecialLocation(juce::File::commonApplicationDataDirectory)
+                          .getChildFile("King Studios")
+                          .getChildFile("The Kings Cab")
+                          .getChildFile("assets")
+                          .getChildFile("kkmain.png");
+    }
+   #endif
     
     // Try relative to executable
     if (!mainBodyFile.existsAsFile())
@@ -344,6 +377,17 @@ void TheKingsCabAudioProcessorEditor::loadFooterBackground()
     footerFile = juce::File::getCurrentWorkingDirectory()
                     .getChildFile("assets")
                     .getChildFile("kkfooter.png");
+
+   #if JUCE_WINDOWS
+    if (!footerFile.existsAsFile())
+    {
+        footerFile = juce::File::getSpecialLocation(juce::File::commonApplicationDataDirectory)
+                        .getChildFile("King Studios")
+                        .getChildFile("The Kings Cab")
+                        .getChildFile("assets")
+                        .getChildFile("kkfooter.png");
+    }
+   #endif
     
     // Try relative to executable
     if (!footerFile.existsAsFile())

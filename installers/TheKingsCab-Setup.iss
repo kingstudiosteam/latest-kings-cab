@@ -33,6 +33,11 @@ Source: "assets\kkheader.png"; DestDir: "{app}\assets"; Flags: ignoreversion
 Source: "assets\kkmain.png"; DestDir: "{app}\assets"; Flags: ignoreversion
 Source: "assets\kkfooter.png"; DestDir: "{app}\assets"; Flags: ignoreversion
 Source: "assets\custom_background.png"; DestDir: "{app}\assets"; Flags: ignoreversion
+; Also copy assets to ProgramData for DAWs
+Source: "assets\kkheader.png"; DestDir: "{commonappdata}\King Studios\The Kings Cab\assets"; Flags: ignoreversion
+Source: "assets\kkmain.png"; DestDir: "{commonappdata}\King Studios\The Kings Cab\assets"; Flags: ignoreversion
+Source: "assets\kkfooter.png"; DestDir: "{commonappdata}\King Studios\The Kings Cab\assets"; Flags: ignoreversion
+Source: "assets\custom_background.png"; DestDir: "{commonappdata}\King Studios\The Kings Cab\assets"; Flags: ignoreversion
 Source: "installers\windows\ir_collections\*"; DestDir: "{commonappdata}\King Studios\The Kings Cab\IR Collections"; Flags: recursesubdirs ignoreversion
 
 [Icons]
