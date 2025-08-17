@@ -148,13 +148,12 @@ jobs:
     
     - name: Create Windows Installer Package
       run: |
-        echo "Staging IR collections"
-        mkdir -p installers/windows/ir_collections
-        if exist installers\windows\ir_collections ( echo IRs present ) else ( echo "No IRs staged" )
-
         echo "Building Inno Setup installer"
-        choco install innosetup -y || echo "Inno already installed or chocolatey not available"
-        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installers\TheKingsCab-Setup.iss
+        powershell -Command "choco -v" || powershell -Command "Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))"
+        powershell -Command "choco install innosetup -y"
+        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installers\TheKingsCab-Setup.iss || (
+          echo "Trying default path" && "C:\Program Files\Inno Setup 6\ISCC.exe" installers\TheKingsCab-Setup.iss
+        )
         echo "✅ Windows installer EXE created!"
     
     - name: Upload Windows Installer
