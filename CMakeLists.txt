@@ -36,7 +36,7 @@ juce_add_plugin(TheKingsCab
   PLUGIN_MANUFACTURER_CODE KngS
   PLUGIN_CODE KCab
   BUNDLE_ID com.kingstudios.thekingscab
-  PRODUCT_NAME "The King's Cab"
+  PRODUCT_NAME "The Kings Cab"
   DESCRIPTION "Professional impulse response loader with 6-slot cabinet simulation"
   IS_SYNTH FALSE
   NEEDS_MIDI_INPUT FALSE

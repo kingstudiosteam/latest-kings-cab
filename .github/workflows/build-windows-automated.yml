@@ -148,15 +148,20 @@ jobs:
     
     - name: Create Windows Installer Package
       run: |
-        cd installers/windows
-        powershell -Command "Compress-Archive -Path * -DestinationPath 'TheKingsCab-Windows-Complete.zip' -Force"
-        echo "✅ Windows installer package created!"
+        echo "Staging IR collections"
+        mkdir -p installers/windows/ir_collections
+        if exist installers\windows\ir_collections ( echo IRs present ) else ( echo "No IRs staged" )
+
+        echo "Building Inno Setup installer"
+        choco install innosetup -y || echo "Inno already installed or chocolatey not available"
+        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installers\TheKingsCab-Setup.iss
+        echo "✅ Windows installer EXE created!"
     
     - name: Upload Windows Installer
       uses: actions/upload-artifact@v4
       with:
-        name: TheKingsCab-Windows-Complete
-        path: installers/windows/TheKingsCab-Windows-Complete.zip
+        name: TheKingsCab-Windows-Setup
+        path: installers/TheKingsCab-Windows-Setup.exe
         if-no-files-found: error
     
     - name: Upload Individual Plugins

@@ -18,9 +18,47 @@ TheKingsCabAudioProcessor::TheKingsCabAudioProcessor()
       irManager()
 {
     // Initialize IR manager with King Studios exclusive IR collection
-    // This plugin only works with the premium IRs provided in this directory
-    // Use relative path for cross-platform compatibility
-    irManager.setIRDirectory(juce::File::getCurrentWorkingDirectory().getChildFile("IR_Collections"));
+    // Try multiple common install/test locations so Standalone and DAWs find IRs without user setup
+    {
+        juce::File chosenIRDir;
+
+        // Candidate locations in order of preference
+        juce::Array<juce::File> candidates;
+
+       #if JUCE_WINDOWS
+        // ProgramData path used by Windows installers
+        candidates.add(juce::File::getSpecialLocation(juce::File::commonApplicationDataDirectory)
+                           .getChildFile("King Studios")
+                           .getChildFile("The Kings Cab")
+                           .getChildFile("IR Collections"));
+        // Desktop legacy path (during development/testing)
+        candidates.add(juce::File::getSpecialLocation(juce::File::userHomeDirectory)
+                           .getChildFile("Desktop")
+                           .getChildFile("KINGS CAB"));
+       #endif
+
+        // Next to executable (e.g., Standalone next to assets copied beside .exe)
+        candidates.add(juce::File::getSpecialLocation(juce::File::currentExecutableFile)
+                           .getParentDirectory()
+                           .getChildFile("IR_Collections"));
+
+        // Relative to current working directory (useful when running from source tree)
+        candidates.add(juce::File::getCurrentWorkingDirectory().getChildFile("IR_Collections"));
+
+        for (auto& dir : candidates)
+        {
+            if (dir.exists() && dir.isDirectory())
+            {
+                chosenIRDir = dir;
+                break;
+            }
+        }
+
+        if (chosenIRDir.exists())
+            irManager.setIRDirectory(chosenIRDir);
+        else
+            irManager.setIRDirectory(juce::File()); // set empty; UI can prompt or remain unpopulated gracefully
+    }
 }
 
 TheKingsCabAudioProcessor::~TheKingsCabAudioProcessor()
@@ -103,7 +141,7 @@ void TheKingsCabAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     spec.sampleRate = sampleRate;
     spec.maximumBlockSize = static_cast<juce::uint32>(samplesPerBlock);
     spec.numChannels = static_cast<juce::uint32>(getTotalNumOutputChannels());
-
+    
     convolutionEngine.prepare(spec);
 }
 
