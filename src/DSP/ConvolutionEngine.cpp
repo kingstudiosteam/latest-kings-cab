@@ -67,6 +67,7 @@ void ConvolutionEngine::process(const juce::dsp::ProcessContextReplacing<float>&
 
     // Check if any slots are soloed
     bool hasAnySolo = hasAnySoloedSlots();
+    bool anySlotProcessed = false;
 
     // Process each IR slot
     for (size_t i = 0; i < irSlots.size(); ++i)
@@ -84,6 +85,7 @@ void ConvolutionEngine::process(const juce::dsp::ProcessContextReplacing<float>&
 
         // Process this slot
         processSlot(static_cast<int>(i), context);
+        anySlotProcessed = true;
     }
 
     // Apply master controls
@@ -92,16 +94,8 @@ void ConvolutionEngine::process(const juce::dsp::ProcessContextReplacing<float>&
     auto currentMasterGain = masterGainSmoother.getNextValue();
     auto currentMasterMix = masterMixSmoother.getNextValue();
 
-    // Check if any IRs are loaded
-    bool hasAnyLoadedIR = false;
-    for (const auto& slot : irSlots)
-    {
-        if (slot->hasIR.load())
-        {
-            hasAnyLoadedIR = true;
-            break;
-        }
-    }
+    // Use whether any slot actually processed this block to decide mixing behavior
+    const bool hasActiveIRThisBlock = anySlotProcessed;
 
     for (int ch = 0; ch < numChannels; ++ch)
     {
@@ -113,7 +107,7 @@ void ConvolutionEngine::process(const juce::dsp::ProcessContextReplacing<float>&
         {
             float finalSample;
             
-            if (hasAnyLoadedIR)
+            if (hasActiveIRThisBlock)
             {
                 // Cabinet mode: IRs completely replace the dry signal
                 // Mix control blends between full dry (0) and full IR-processed (1)
