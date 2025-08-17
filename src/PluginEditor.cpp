@@ -236,15 +236,9 @@ void TheKingsCabAudioProcessorEditor::updateStatusDisplay()
 void TheKingsCabAudioProcessorEditor::loadCustomBackground()
 {
     // Try to load custom background image (840x620 pixels)
-    juce::File backgroundFile("/Users/justinmitchell/cursorfiles/cursorfiles/assets/custom_background.png");
-    
-    // Also try relative paths
-    if (!backgroundFile.existsAsFile())
-    {
-        backgroundFile = juce::File::getCurrentWorkingDirectory()
+    juce::File backgroundFile = juce::File::getCurrentWorkingDirectory()
                               .getChildFile("assets")
                               .getChildFile("custom_background.png");
-    }
     
         if (backgroundFile.existsAsFile())
     {
@@ -270,16 +264,10 @@ void TheKingsCabAudioProcessorEditor::loadHeaderBackground()
     // Try multiple paths for header background image
     juce::File headerFile;
     
-    // Try absolute path first (most reliable for development)
-    headerFile = juce::File("/Users/justinmitchell/cursorfiles/cursorfiles/assets/kkheader.png");
-    
-    // If not found, try relative to current working directory
-    if (!headerFile.existsAsFile())
-    {
-        headerFile = juce::File::getCurrentWorkingDirectory()
-                        .getChildFile("assets")
-                        .getChildFile("kkheader.png");
-    }
+    // Try relative to current working directory
+    headerFile = juce::File::getCurrentWorkingDirectory()
+                    .getChildFile("assets")
+                    .getChildFile("kkheader.png");
     
     // Try relative to executable
     if (!headerFile.existsAsFile())
@@ -314,16 +302,10 @@ void TheKingsCabAudioProcessorEditor::loadMainBodyBackground()
     // Try multiple paths for main body background image
     juce::File mainBodyFile;
     
-    // Try absolute path first (most reliable for development)
-    mainBodyFile = juce::File("/Users/justinmitchell/cursorfiles/cursorfiles/assets/kkmain.png");
-    
-    // If not found, try relative to current working directory
-    if (!mainBodyFile.existsAsFile())
-    {
-        mainBodyFile = juce::File::getCurrentWorkingDirectory()
-                        .getChildFile("assets")
-                        .getChildFile("kkmain.png");
-    }
+    // Try relative to current working directory
+    mainBodyFile = juce::File::getCurrentWorkingDirectory()
+                    .getChildFile("assets")
+                    .getChildFile("kkmain.png");
     
     // Try relative to executable
     if (!mainBodyFile.existsAsFile())
@@ -358,16 +340,10 @@ void TheKingsCabAudioProcessorEditor::loadFooterBackground()
     // Try multiple paths for footer background image
     juce::File footerFile;
     
-    // Try absolute path first (most reliable for development)
-    footerFile = juce::File("/Users/justinmitchell/cursorfiles/cursorfiles/assets/kkfooter.png");
-    
-    // If not found, try relative to current working directory
-    if (!footerFile.existsAsFile())
-    {
-        footerFile = juce::File::getCurrentWorkingDirectory()
-                        .getChildFile("assets")
-                        .getChildFile("kkfooter.png");
-    }
+    // Try relative to current working directory
+    footerFile = juce::File::getCurrentWorkingDirectory()
+                    .getChildFile("assets")
+                    .getChildFile("kkfooter.png");
     
     // Try relative to executable
     if (!footerFile.existsAsFile())

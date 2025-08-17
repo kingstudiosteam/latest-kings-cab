@@ -19,7 +19,8 @@ TheKingsCabAudioProcessor::TheKingsCabAudioProcessor()
 {
     // Initialize IR manager with King Studios exclusive IR collection
     // This plugin only works with the premium IRs provided in this directory
-    irManager.setIRDirectory(juce::File("/Users/justinmitchell/Desktop/KINGS CAB"));
+    // Use relative path for cross-platform compatibility
+    irManager.setIRDirectory(juce::File::getCurrentWorkingDirectory().getChildFile("IR_Collections"));
 }
 
 TheKingsCabAudioProcessor::~TheKingsCabAudioProcessor()

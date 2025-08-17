@@ -57,7 +57,7 @@ target_sources(TheKingsCab PRIVATE
   src/LookAndFeel.cpp
   src/DSP/ConvolutionEngine.cpp
   src/DSP/IRManager.cpp
-      src/Components/IRSlot.cpp
+  src/Components/IRSlot.cpp
 )
 
 # Performance and security optimizations for IR loading
