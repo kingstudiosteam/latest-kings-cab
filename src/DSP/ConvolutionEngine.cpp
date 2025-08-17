@@ -68,6 +68,7 @@ void ConvolutionEngine::process(const juce::dsp::ProcessContextReplacing<float>&
     // Check if any slots are soloed
     bool hasAnySolo = hasAnySoloedSlots();
     bool anySlotProcessed = false;
+    bool hasAnyLoadedIR = false;
 
     // Process each IR slot
     for (size_t i = 0; i < irSlots.size(); ++i)
@@ -77,6 +78,7 @@ void ConvolutionEngine::process(const juce::dsp::ProcessContextReplacing<float>&
         // Skip if no IR loaded
         if (!slot.hasIR.load())
             continue;
+        hasAnyLoadedIR = true;
 
         // Skip if muted or if other slots are soloed (and this isn't)
         bool shouldPlay = !slot.muted.load() && (!hasAnySolo || slot.soloed.load());
@@ -117,8 +119,8 @@ void ConvolutionEngine::process(const juce::dsp::ProcessContextReplacing<float>&
             }
             else
             {
-                // Bypass mode: pass through dry signal when no IRs loaded
-                finalSample = dryData[sample] * currentMasterGain;
+                // If IRs exist but none active this block, output silence; if none loaded at all, pass dry
+                finalSample = hasAnyLoadedIR ? 0.0f : (dryData[sample] * currentMasterGain);
             }
             
             outputData[sample] = finalSample;
@@ -184,7 +186,9 @@ bool ConvolutionEngine::loadImpulseResponse(int slotIndex, const juce::AudioBuff
         // Force immediate convolution activation by resetting and preparing
         DBG("Forcing convolution reset and prepare...");
         slot.convolution->reset();
-        slot.convolution->prepare(juce::dsp::ProcessSpec{currentSampleRate, static_cast<juce::uint32>(currentBlockSize), 2});
+        slot.convolution->prepare(juce::dsp::ProcessSpec{currentSampleRate,
+                                                         static_cast<juce::uint32>(currentBlockSize),
+                                                         static_cast<juce::uint32>(numChannels)});
         
         // Ensure immediate, non-faded activation for this slot
         slot.gainSmoother.setCurrentAndTargetValue(slot.gain.load());
