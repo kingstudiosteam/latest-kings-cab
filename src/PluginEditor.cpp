@@ -250,6 +250,12 @@ void TheKingsCabAudioProcessorEditor::loadCustomBackground()
                               .getChildFile("custom_background.png");
     }
    #endif
+   #if JUCE_MAC
+    if (!backgroundFile.existsAsFile())
+    {
+        backgroundFile = juce::File("/Users/Shared/King Studios/The Kings Cab/assets/custom_background.png");
+    }
+   #endif
     
         if (backgroundFile.existsAsFile())
     {
@@ -289,6 +295,10 @@ void TheKingsCabAudioProcessorEditor::loadHeaderBackground()
                         .getChildFile("assets")
                         .getChildFile("kkheader.png");
     }
+   #endif
+   #if JUCE_MAC
+    if (!headerFile.existsAsFile())
+        headerFile = juce::File("/Users/Shared/King Studios/The Kings Cab/assets/kkheader.png");
    #endif
     
     // Try relative to executable
@@ -339,6 +349,10 @@ void TheKingsCabAudioProcessorEditor::loadMainBodyBackground()
                           .getChildFile("kkmain.png");
     }
    #endif
+   #if JUCE_MAC
+    if (!mainBodyFile.existsAsFile())
+        mainBodyFile = juce::File("/Users/Shared/King Studios/The Kings Cab/assets/kkmain.png");
+   #endif
     
     // Try relative to executable
     if (!mainBodyFile.existsAsFile())
@@ -387,6 +401,10 @@ void TheKingsCabAudioProcessorEditor::loadFooterBackground()
                         .getChildFile("assets")
                         .getChildFile("kkfooter.png");
     }
+   #endif
+   #if JUCE_MAC
+    if (!footerFile.existsAsFile())
+        footerFile = juce::File("/Users/Shared/King Studios/The Kings Cab/assets/kkfooter.png");
    #endif
     
     // Try relative to executable

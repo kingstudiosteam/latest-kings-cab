@@ -37,6 +37,16 @@ TheKingsCabAudioProcessor::TheKingsCabAudioProcessor()
                            .getChildFile("KINGS CAB"));
        #endif
 
+       #if JUCE_MAC
+        // Shared IRs installed by macOS installer
+        candidates.add(juce::File("/Users/Shared/King Studios/The Kings Cab/IR Collections"));
+        // /Library/Application Support (common app data)
+        candidates.add(juce::File::getSpecialLocation(juce::File::commonApplicationDataDirectory)
+                           .getChildFile("King Studios")
+                           .getChildFile("The Kings Cab")
+                           .getChildFile("IR Collections"));
+       #endif
+
         // Next to executable (e.g., Standalone next to assets copied beside .exe)
         candidates.add(juce::File::getSpecialLocation(juce::File::currentExecutableFile)
                            .getParentDirectory()
