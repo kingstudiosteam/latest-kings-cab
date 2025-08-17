@@ -155,14 +155,10 @@ jobs:
         echo "✅ Windows installer script created!"
     
     - name: Create Windows Installer Package
-      run: |
-        echo "Building Inno Setup installer"
-        powershell -Command "choco -v" || powershell -Command "Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))"
-        powershell -Command "choco install innosetup -y"
-        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installers\TheKingsCab-Setup.iss || (
-          echo "Trying default path" && "C:\Program Files\Inno Setup 6\ISCC.exe" installers\TheKingsCab-Setup.iss
-        )
-        echo "✅ Windows installer EXE created!"
+      uses: Minionguyjpro/Inno-Setup-Action@v1.2.5
+      with:
+        path: installers/TheKingsCab-Setup.iss
+        options: /O installers
     
     - name: Upload Windows Installer
       uses: actions/upload-artifact@v4

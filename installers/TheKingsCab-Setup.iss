@@ -1,5 +1,5 @@
 [Setup]
-AppId={{A7DB3D4F-9F5C-4C9D-8F2B-1F7A6E29B9B1}
+AppId={{A7DB3D4F-9F5C-4C9D-8F2B-1F7A6E29B9B1}}
 AppName=The Kings Cab
 AppVersion=1.0.0
 AppPublisher=King Studios
