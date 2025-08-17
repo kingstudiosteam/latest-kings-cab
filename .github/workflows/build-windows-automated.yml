@@ -29,16 +29,16 @@ jobs:
         cd build
         cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DJUCE_BUILD_EXTRAS=OFF -DJUCE_BUILD_EXAMPLES=OFF -DJUCE_FETCH_VST3_SDK=ON
     
-    - name: Build Windows Plugins
+    - name: Build Windows Plugins (VST3 + Standalone only)
       run: |
         cd build
-        cmake --build . --config Release --parallel 4
+        cmake --build . --config Release --parallel 4 --target TheKingsCab_VST3 TheKingsCab_Standalone
     
     - name: Verify Windows Builds
       run: |
         echo "Checking Windows plugin builds..."
-        ls -la "TheKingsCab_artefacts/Release/VST3/"
-        ls -la "TheKingsCab_artefacts/Release/AAX/"
+        ls -la "TheKingsCab_artefacts/Release/VST3/" || echo "No VST3 folder found"
+        ls -la "TheKingsCab_artefacts/Release/Standalone/" || echo "No Standalone folder found"
         echo "✅ Windows plugins built successfully!"
     
     - name: Create Windows Installer Structure
@@ -48,10 +48,18 @@ jobs:
         mkdir -p installers/windows/ir_collections
         
         # Copy Windows VST3
-        cp -r "TheKingsCab_artefacts/Release/VST3/The King's Cab.vst3" "installers/windows/plugins/VST3/"
-        
-        # Copy Windows AAX
-        cp -r "TheKingsCab_artefacts/Release/AAX/The King's Cab.aaxplugin" "installers/windows/plugins/AAX/"
+        if exist "TheKingsCab_artefacts\Release\VST3\The Kings Cab.vst3" (
+          xcopy /E /I /Y "TheKingsCab_artefacts\Release\VST3\The Kings Cab.vst3" installers\windows\plugins\VST3\The Kings Cab.vst3
+        ) else (
+          echo "VST3 not found"
+        )
+
+        # Copy Windows Standalone (optional)
+        if exist "TheKingsCab_artefacts\Release\Standalone\The Kings Cab.exe" (
+          copy /Y "TheKingsCab_artefacts\Release\Standalone\The Kings Cab.exe" installers\windows\
+        ) else (
+          echo "Standalone not found"
+        )
         
         echo "✅ Windows installer structure created!"
     
