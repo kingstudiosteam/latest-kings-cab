@@ -51,7 +51,7 @@ void TheKingsCabAudioProcessorEditor::setupComponents()
     masterMixSlider->addListener(this);
     addAndMakeVisible(*masterMixSlider);
 
-    masterGainLabel = std::make_unique<juce::Label>("GainLabel", "MASTER");
+    masterGainLabel = std::make_unique<juce::Label>("GainLabel", "MASTER VOLUME");
     masterGainLabel->setFont(juce::Font(11.0f).boldened());
     masterGainLabel->setJustificationType(juce::Justification::centred);
     masterGainLabel->setColour(juce::Label::textColourId, 
@@ -150,12 +150,25 @@ void TheKingsCabAudioProcessorEditor::resized()
     
     // No folder browser needed - using individual slot dropdowns
     
-    // Master controls removed - hide them and use more space for IR slots
-    masterGainSlider->setVisible(false);
-    masterGainLabel->setVisible(false);
+    // Show master volume centered at the top; hide mix knob
+    masterGainSlider->setVisible(true);
+    masterGainLabel->setVisible(true);
     masterMixSlider->setVisible(false);
     masterMixLabel->setVisible(false);
-    bounds.removeFromTop(10); // Small top margin
+
+    // Reserve area for master gain in the top of the main content
+    auto masterArea = bounds.removeFromTop(90);
+    {
+        const int knobSize = 64;
+        const int labelHeight = 18;
+        const int spacing = 6;
+        auto centerX = masterArea.getCentreX();
+        // Place label above the knob
+        juce::Rectangle<int> labelBounds(centerX - 120/2, masterArea.getY(), 120, labelHeight);
+        masterGainLabel->setBounds(labelBounds);
+        juce::Rectangle<int> knobBounds(centerX - knobSize / 2, labelBounds.getBottom() + spacing, knobSize, knobSize);
+        masterGainSlider->setBounds(knobBounds);
+    }
     
     // Compact IR slots in 2x3 grid - positioned relative to remaining bounds  
     auto slotsArea = bounds;
