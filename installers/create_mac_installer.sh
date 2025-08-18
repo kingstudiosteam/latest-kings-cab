@@ -109,6 +109,8 @@ cat > "${RESOURCES_DIR}/preinstall" << 'EOF'
 rm -rf "/Library/Audio/Plug-Ins/VST3/The Kings Cab.vst3"
 rm -rf "/Library/Audio/Plug-Ins/Components/The Kings Cab.component"
 rm -rf "/Library/Application Support/Avid/Audio/Plug-Ins/The Kings Cab.aaxplugin"
+rm -rf "/Users/Shared/King Studios/The Kings Cab"
+rm -rf "/Library/Application Support/King Studios/The Kings Cab"
 exit 0
 EOF
 
