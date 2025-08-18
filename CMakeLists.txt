@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(TheKingsCab VERSION 1.0.0 LANGUAGES C CXX)
+project(TheKingsCab VERSION 1.1.0 LANGUAGES C CXX)
 
 # Modern C++20 with strict standards for maximum performance
 set(CMAKE_CXX_STANDARD 20)
@@ -99,12 +99,17 @@ target_link_libraries(TheKingsCab PRIVATE
   juce::juce_graphics
 )
 
-# Aggressive optimization flags for low CPU usage
+# Deployment target and optimization flags for broad macOS compatibility
+if(APPLE)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS deployment target" FORCE)
+endif()
+
+# Optimization flags for low CPU usage (avoid CPU-specific tuning for universal builds)
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     if(MSVC)
         target_compile_options(TheKingsCab PRIVATE /O2 /Ob2 /Oi /Ot /GS- /fp:fast)
     else()
-        target_compile_options(TheKingsCab PRIVATE -O3 -ffast-math -march=native -mtune=native)
+        target_compile_options(TheKingsCab PRIVATE -O3 -ffast-math)
     endif()
 endif()
 

@@ -1,13 +1,13 @@
 [Setup]
 AppId={{A7DB3D4F-9F5C-4C9D-8F2B-1F7A6E29B9B1}}
 AppName=The Kings Cab
-AppVersion=1.0.0
+AppVersion=1.1.0
 AppPublisher=King Studios
 DefaultDirName={pf}\King Studios\The Kings Cab
 DisableDirPage=yes
 DisableProgramGroupPage=yes
 OutputDir=installers
-OutputBaseFilename=TheKingsCab-Windows-Setup
+OutputBaseFilename=TheKingsCab-Windows-Setup-1.1.0
 Compression=lzma
 SolidCompression=yes
 ArchitecturesAllowed=x64

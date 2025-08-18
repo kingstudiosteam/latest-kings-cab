@@ -16,7 +16,7 @@ echo "=============================================="
 # Configuration
 PLUGIN_NAME="The Kings Cab"
 COMPANY_NAME="King Studios"
-VERSION="1.0.0"
+VERSION="1.1.0"
 BUNDLE_ID="com.kingstudios.thekingscab"
 BUILD_DIR="${ROOT_DIR}/build"
 INSTALLER_DIR="${SCRIPT_DIR}/mac"

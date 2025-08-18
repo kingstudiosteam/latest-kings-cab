@@ -166,8 +166,8 @@ jobs:
     - name: Upload Windows Installer
       uses: actions/upload-artifact@v4
       with:
-        name: TheKingsCab-Windows-Setup
-        path: installers/TheKingsCab-Windows-Setup.exe
+        name: TheKingsCab-Windows-Setup-1.1.0
+        path: installers/TheKingsCab-Windows-Setup-1.1.0.exe
         if-no-files-found: error
     
     - name: Upload Individual Plugins
