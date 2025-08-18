@@ -85,7 +85,7 @@ private:
 
     // Performance constants
     static constexpr float kSmoothingTimeMs = 20.0f;
-    static constexpr float kMinGain = 0.0001f; // -80dB
+    static constexpr float kMinGain = 0.000001f; // ~-120dB for deeper attenuation
     
     //==============================================================================
     // Helper methods

@@ -374,9 +374,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout TheKingsCabAudioProcessor::c
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> parameters;
 
     // Master controls
-    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
-        "master_gain", "Master Gain", 
-        juce::NormalisableRange<float>(0.0f, 2.0f, 0.01f), 1.0f));
+    {
+        juce::NormalisableRange<float> masterGainRange(0.0f, 4.0f, 0.001f);
+        masterGainRange.setSkewForCentre(1.0f); // fine control around unity
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            "master_gain", "Master Gain", masterGainRange, 1.0f));
+    }
 
     parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
         "master_mix", "Dry/IR Mix", 
@@ -387,9 +390,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout TheKingsCabAudioProcessor::c
     {
         auto slotPrefix = "slot" + juce::String(i) + "_";
 
+        juce::NormalisableRange<float> slotGainRange(0.0f, 4.0f, 0.001f);
+        slotGainRange.setSkewForCentre(1.0f); // fine control around unity
         parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
             slotPrefix + "gain", "Slot " + juce::String(i + 1) + " Gain",
-            juce::NormalisableRange<float>(0.0f, 2.0f, 0.01f), 1.0f));
+            slotGainRange, 1.0f));
 
         parameters.push_back(std::make_unique<juce::AudioParameterBool>(
             slotPrefix + "mute", "Slot " + juce::String(i + 1) + " Mute", false));

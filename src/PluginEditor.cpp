@@ -39,7 +39,9 @@ void TheKingsCabAudioProcessorEditor::setupComponents()
     // Master controls setup
     masterGainSlider = std::make_unique<juce::Slider>(juce::Slider::RotaryHorizontalVerticalDrag,
                                                       juce::Slider::NoTextBox);
-    masterGainSlider->setRange(0.0, 2.0, 0.01);
+    masterGainSlider->setRange(0.0, 4.0, 0.001);
+    masterGainSlider->setSkewFactorFromMidPoint(1.0); // finer control near 1.0
+    masterGainSlider->setVelocityModeParameters(0.8, 1, 0.05, true);
     masterGainSlider->setValue(1.0);
     masterGainSlider->addListener(this);
     addAndMakeVisible(*masterGainSlider);
