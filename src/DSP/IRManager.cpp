@@ -342,11 +342,23 @@ void IRManager::scanDirectory(const juce::File& directory, FolderInfo& folderInf
     
     DBG("IRManager: Directory scan complete. Found " << totalFilesFound << " total files, " << validFilesFound << " valid IRs");
     
-    // Sort IR files by name for consistent ordering
+    // Sort IR files by name for consistent ordering, then deduplicate by name and file path
     std::sort(folderInfo.irFiles.begin(), folderInfo.irFiles.end(),
         [](const IRInfo& a, const IRInfo& b) {
-            return a.name.compareIgnoreCase(b.name) < 0;
+            const int nameCmp = a.name.compareIgnoreCase(b.name);
+            if (nameCmp != 0) return nameCmp < 0;
+            return a.file.getFullPathName().compareIgnoreCase(b.file.getFullPathName()) < 0;
         });
+
+    folderInfo.irFiles.erase(
+        std::unique(folderInfo.irFiles.begin(), folderInfo.irFiles.end(),
+            [](const IRInfo& x, const IRInfo& y){
+                return x.name.equalsIgnoreCase(y.name) ||
+                       x.file.getFullPathName().equalsIgnoreCase(y.file.getFullPathName());
+            }
+        ),
+        folderInfo.irFiles.end()
+    );
 }
 
 bool IRManager::loadIRBuffer(const juce::File& file, juce::AudioBuffer<float>& buffer, IRInfo& info)
