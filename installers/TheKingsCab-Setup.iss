@@ -53,7 +53,13 @@ Name: "{userdesktop}\The Kings Cab (Standalone)"; Filename: "{app}\The Kings Cab
 [UninstallDelete]
 Type: filesandordirs; Name: "{commonappdata}\King Studios\The Kings Cab"
 
+[InstallDelete]
+Type: filesandordirs; Name: "{commoncf}\VST3\The Kings Cab.vst3"
+Type: filesandordirs; Name: "{commoncf}\Avid\Audio\Plug-Ins\The Kings Cab.aaxplugin"
+Type: filesandordirs; Name: "{commonappdata}\King Studios\The Kings Cab"
+Type: filesandordirs; Name: "{app}"
+
 [Registry]
 Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\The Kings Cab"; ValueType: string; ValueName: "DisplayName"; ValueData: "The Kings Cab"; Flags: uninsdeletekey
 Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\The Kings Cab"; ValueType: string; ValueName: "Publisher"; ValueData: "King Studios"
-Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\The Kings Cab"; ValueType: string; ValueName: "DisplayVersion"; ValueData: "1.0.0"
+Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\The Kings Cab"; ValueType: string; ValueName: "DisplayVersion"; ValueData: "1.1.0"

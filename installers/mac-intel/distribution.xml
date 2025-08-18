@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="1">
+    <title>The King's Cab 1.1.0 (Intel)</title>
+    <organization>King Studios</organization>
+    <domains enable_anywhere="false" enable_currentUserHome="false" enable_localSystem="true"/>
+    <options customize="never" require-scripts="true" rootVolumeOnly="true" hostArchitectures="x86_64"/>
+    <pkg-ref id="com.kingstudios.thekingscab.intel"/>
+    <choices-outline>
+        <line choice="default">
+            <line choice="com.kingstudios.thekingscab.intel"/>
+        </line>
+    </choices-outline>
+    <choice id="default"/>
+    <choice id="com.kingstudios.thekingscab.intel" visible="false">
+        <pkg-ref id="com.kingstudios.thekingscab.intel"/>
+    </choice>
+    <pkg-ref id="com.kingstudios.thekingscab.intel" version="1.1.0" onConclusion="none">TheKingsCab-Core-Intel.pkg</pkg-ref>
+    <readme file="/Users/justinmitchell/cursorfiles/cursorfiles/installers/mac-intel/resources/readme.txt"/>
+</installer-gui-script>

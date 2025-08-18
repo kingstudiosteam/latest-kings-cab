@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <installer-gui-script minSpecVersion="1">
-    <title>The King's Cab 1.0.0</title>
+    <title>The King's Cab 1.1.0</title>
     <organization>King Studios</organization>
     <domains enable_anywhere="false" enable_currentUserHome="false" enable_localSystem="true"/>
     <options customize="never" require-scripts="true" rootVolumeOnly="true" hostArchitectures="x86_64,arm64"/>
@@ -21,5 +21,5 @@
         <pkg-ref id="com.kingstudios.thekingscab"/>
     </choice>
     
-    <pkg-ref id="com.kingstudios.thekingscab" version="1.0.0" onConclusion="none">TheKingsCab-Core.pkg</pkg-ref>
+    <pkg-ref id="com.kingstudios.thekingscab" version="1.1.0" onConclusion="none">TheKingsCab-Core.pkg</pkg-ref>
 </installer-gui-script>

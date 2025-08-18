@@ -72,11 +72,11 @@ jobs:
         echo '@echo off' > installers/windows/install.bat
         echo 'setlocal EnableDelayedExpansion' >> installers/windows/install.bat
         echo 'color 0F' >> installers/windows/install.bat
-        echo 'title The King'\''s Cab Installer v1.0.0' >> installers/windows/install.bat
+        echo 'title The King'\''s Cab Installer v1.1.0' >> installers/windows/install.bat
         echo '' >> installers/windows/install.bat
         echo 'echo.' >> installers/windows/install.bat
         echo 'echo ========================================================' >> installers/windows/install.bat
-        echo 'echo      The King'\''s Cab v1.0.0 - Professional Installer' >> installers/windows/install.bat
+        echo 'echo      The King'\''s Cab v1.1.0 - Professional Installer' >> installers/windows/install.bat
         echo 'echo                    King Studios' >> installers/windows/install.bat
         echo 'echo ========================================================' >> installers/windows/install.bat
         echo 'echo.' >> installers/windows/install.bat
@@ -134,9 +134,9 @@ jobs:
         echo '' >> installers/windows/install.bat
         echo ':: Register with Windows' >> installers/windows/install.bat
         echo 'echo 📝 Registering with Windows...' >> installers/windows/install.bat
-        echo 'reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\The King'\''s Cab" /v "DisplayName" /t REG_SZ /d "The King'\''s Cab v1.0.0" /f >nul' >> installers/windows/install.bat
+        echo 'reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\The King'\''s Cab" /v "DisplayName" /t REG_SZ /d "The King'\''s Cab v1.1.0" /f >nul' >> installers/windows/install.bat
         echo 'reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\The King'\''s Cab" /v "Publisher" /t REG_SZ /d "King Studios" /f >nul' >> installers/windows/install.bat
-        echo 'reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\The King'\''s Cab" /v "DisplayVersion" /t REG_SZ /d "1.0.0" /f >nul' >> installers/windows/install.bat
+        echo 'reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\The King'\''s Cab" /v "DisplayVersion" /t REG_SZ /d "1.1.0" /f >nul' >> installers/windows/install.bat
         echo 'reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\The King'\''s Cab" /v "URLInfoAbout" /t REG_SZ /d "https://www.kingstudiospa.com" /f >nul' >> installers/windows/install.bat
         echo '' >> installers/windows/install.bat
         echo 'echo.' >> installers/windows/install.bat

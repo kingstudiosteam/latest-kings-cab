@@ -15,6 +15,20 @@ if [ -d "/Users/Shared/King Studios/The Kings Cab/IR Collections" ]; then
     echo "✅ IR Collections installed and configured!"
 fi
 
+# Remove quarantine attributes so Logic sees the plugins without third-party prompts
+xattr -dr com.apple.quarantine "/Library/Audio/Plug-Ins/VST3/The Kings Cab.vst3" || true
+xattr -dr com.apple.quarantine "/Library/Audio/Plug-Ins/Components/The Kings Cab.component" || true
+if [ -d "/Library/Application Support/Avid/Audio/Plug-Ins/The Kings Cab.aaxplugin" ]; then
+  xattr -dr com.apple.quarantine "/Library/Application Support/Avid/Audio/Plug-Ins/The Kings Cab.aaxplugin" || true
+fi
+
+# Ad-hoc sign installed binaries to satisfy Gatekeeper on Intel and Apple Silicon
+codesign -s - --deep -f "/Library/Audio/Plug-Ins/VST3/The Kings Cab.vst3" || true
+codesign -s - --deep -f "/Library/Audio/Plug-Ins/Components/The Kings Cab.component" || true
+if [ -d "/Library/Application Support/Avid/Audio/Plug-Ins/The Kings Cab.aaxplugin" ]; then
+  codesign -s - --deep -f "/Library/Application Support/Avid/Audio/Plug-Ins/The Kings Cab.aaxplugin" || true
+fi
+
 # Kill any running DAWs to ensure plugin registration
 killall "Logic Pro" 2>/dev/null || true
 killall "Pro Tools" 2>/dev/null || true
