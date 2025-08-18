@@ -85,9 +85,13 @@ void ConvolutionEngine::process(const juce::dsp::ProcessContextReplacing<float>&
         if (!shouldPlay)
             continue;
 
-        // Process this slot
-        processSlot(static_cast<int>(i), context);
-        anySlotProcessed = true;
+        // Skip processing while this slot is loading a new IR to avoid transient crashes
+        if (!slot.isLoading.load())
+        {
+            // Process this slot
+            processSlot(static_cast<int>(i), context);
+            anySlotProcessed = true;
+        }
     }
 
     // Apply master controls
@@ -167,6 +171,7 @@ bool ConvolutionEngine::loadImpulseResponse(int slotIndex, const juce::AudioBuff
 
     try
     {
+        slot.isLoading.store(true);
         DBG("Creating IR copy for JUCE convolution...");
         // Load IR into convolution processor
         // Create a copy that can be moved (JUCE 7 requires move semantics)
@@ -205,6 +210,7 @@ bool ConvolutionEngine::loadImpulseResponse(int slotIndex, const juce::AudioBuff
         
         DBG("Convolution forced to active state");
         slot.hasIR.store(true);
+        slot.isLoading.store(false);
         DBG("=== CONVOLUTION ENGINE loadImpulseResponse SUCCESS ===");
         return true;
     }
@@ -212,6 +218,7 @@ bool ConvolutionEngine::loadImpulseResponse(int slotIndex, const juce::AudioBuff
     {
         DBG("ERROR: Exception in convolution->loadImpulseResponse: " << e.what());
         slot.hasIR.store(false);
+        slot.isLoading.store(false);
         DBG("=== CONVOLUTION ENGINE loadImpulseResponse FAILED ===");
         return false;
     }

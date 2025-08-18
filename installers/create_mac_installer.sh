@@ -43,7 +43,7 @@ mkdir -p "${PKG_DIR}/Users/Shared/King Studios/The Kings Cab/IR Collections"
 if [ ! -d "${BUILD_DIR}/TheKingsCab_artefacts/Release/VST3/${PLUGIN_NAME}.vst3" ] || \
    [ ! -d "${BUILD_DIR}/TheKingsCab_artefacts/Release/AU/${PLUGIN_NAME}.component" ]; then
   echo "🔨 Building macOS VST3/AU (Release)..."
-  cmake -S "${ROOT_DIR}" -B "${BUILD_DIR}" -DCMAKE_BUILD_TYPE=Release
+  cmake -S "${ROOT_DIR}" -B "${BUILD_DIR}" -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
   cmake --build "${BUILD_DIR}" --config Release --target TheKingsCab_VST3 TheKingsCab_AU -j4
 fi
 
@@ -129,6 +129,20 @@ fi
 if [ -d "/Users/Shared/King Studios/The Kings Cab/IR Collections" ]; then
     chmod -R 755 "/Users/Shared/King Studios/The Kings Cab"
     echo "✅ IR Collections installed and configured!"
+fi
+
+# Remove quarantine attributes so Logic sees the plugins without third-party prompts
+xattr -dr com.apple.quarantine "/Library/Audio/Plug-Ins/VST3/The Kings Cab.vst3" || true
+xattr -dr com.apple.quarantine "/Library/Audio/Plug-Ins/Components/The Kings Cab.component" || true
+if [ -d "/Library/Application Support/Avid/Audio/Plug-Ins/The Kings Cab.aaxplugin" ]; then
+  xattr -dr com.apple.quarantine "/Library/Application Support/Avid/Audio/Plug-Ins/The Kings Cab.aaxplugin" || true
+fi
+
+# Ad-hoc sign installed binaries to satisfy Gatekeeper on Intel and Apple Silicon
+codesign -s - --deep -f "/Library/Audio/Plug-Ins/VST3/The Kings Cab.vst3" || true
+codesign -s - --deep -f "/Library/Audio/Plug-Ins/Components/The Kings Cab.component" || true
+if [ -d "/Library/Application Support/Avid/Audio/Plug-Ins/The Kings Cab.aaxplugin" ]; then
+  codesign -s - --deep -f "/Library/Application Support/Avid/Audio/Plug-Ins/The Kings Cab.aaxplugin" || true
 fi
 
 # Kill any running DAWs to ensure plugin registration

@@ -53,6 +53,7 @@ private:
         std::atomic<bool> soloed{ false };
         std::atomic<bool> phaseInverted{ false };
         std::atomic<bool> hasIR{ false };
+        std::atomic<bool> isLoading{ false };
         
         // Smoothed parameters for click-free operation
         juce::LinearSmoothedValue<float> gainSmoother;
