@@ -43,6 +43,7 @@ public:
     void updateFolderList(const std::vector<struct IRManager::FolderInfo>& folders);
     void setLoadedIR(const juce::String& folderName, const juce::String& irName);
     void clearIR();
+    void syncToLoadedFile(const juce::File& file);
 
     //==============================================================================
     // Callbacks for parent component

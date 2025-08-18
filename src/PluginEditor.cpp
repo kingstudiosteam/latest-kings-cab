@@ -607,12 +607,17 @@ void TheKingsCabAudioProcessorEditor::initializeIRData()
     // Update status to show folder count for debugging
     statusLabel->setText("Found " + juce::String(folders.size()) + " folders", juce::dontSendNotification);
     
-    // Update all IR slots with folder data
-    for (auto& irSlot : irSlots)
+    // Update all IR slots with folder data and sync to loaded files from processor state
+    for (int i = 0; i < TheKingsCabAudioProcessor::kNumIRSlots; ++i)
     {
-        if (irSlot)
+        if (irSlots[i])
         {
-            irSlot->updateFolderList(folders);
+            irSlots[i]->updateFolderList(folders);
+            auto loadedFile = audioProcessor.getIRManager().getLoadedIR(i);
+            if (loadedFile.existsAsFile())
+            {
+                irSlots[i]->syncToLoadedFile(loadedFile);
+            }
         }
     }
     

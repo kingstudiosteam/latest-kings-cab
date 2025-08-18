@@ -288,10 +288,8 @@ void TheKingsCabAudioProcessor::setStateInformation (const void* data, int sizeI
                         if (path.isNotEmpty())
                         {
                             juce::File irFile(path);
-                            if (irFile.existsAsFile())
-                            {
-                                loadImpulseResponse(i, irFile);
-                            }
+                            // Attempt to load IR regardless; if missing, slot stays empty gracefully
+                            loadImpulseResponse(i, irFile);
                         }
                     }
                 }
@@ -330,9 +328,9 @@ void TheKingsCabAudioProcessor::loadImpulseResponse(int slotIndex, const juce::F
                     auto* gainParam = valueTreeState.getParameter("slot" + juce::String(slotIndex) + "_gain");
                     if (gainParam)
                     {
-                        // Briefly modify and restore gain to force processing update
+                        // Briefly modify and restore gain (in dB) to force processing update
                         float currentGain = gainParam->getValue();
-                        gainParam->setValueNotifyingHost(currentGain + 0.01f);
+                        gainParam->setValueNotifyingHost(currentGain + 0.1f);
                         gainParam->setValueNotifyingHost(currentGain);
                         DBG("Forced parameter refresh completed");
                     }

@@ -349,6 +349,55 @@ void IRSlot::setLoadedIR(const juce::String& folderName, const juce::String& irN
     repaint();
 }
 
+void IRSlot::syncToLoadedFile(const juce::File& file)
+{
+    if (!file.existsAsFile())
+        return;
+
+    auto folder = file.getParentDirectory().getFileName();
+    auto name = file.getFileNameWithoutExtension();
+
+    // Select folder in combo
+    int folderIndex = -1;
+    for (int i = 0; i < static_cast<int>(availableFolders.size()); ++i)
+    {
+        if (availableFolders[i].name.equalsIgnoreCase(folder))
+        {
+            folderIndex = i;
+            break;
+        }
+    }
+    if (folderIndex >= 0)
+    {
+        folderComboBox->setSelectedItemIndex(folderIndex + 1, juce::dontSendNotification); // +1 for "Select Folder..."
+        updateIRComboBox();
+
+        // Find IR name in list and select
+        int irIndex = -1;
+        for (int i = 0; i < static_cast<int>(displayData.availableIRs.size()); ++i)
+        {
+            if (displayData.availableIRs[i].name.equalsIgnoreCase(name))
+            {
+                irIndex = i;
+                break;
+            }
+        }
+        if (irIndex >= 0)
+        {
+            irComboBox->setSelectedItemIndex(irIndex + 1, juce::dontSendNotification); // +1 for "Select IR..."
+            setLoadedIR(folder, name);
+        }
+        else
+        {
+            setLoadedIR(folder, name);
+        }
+    }
+    else
+    {
+        setLoadedIR(folder, name);
+    }
+}
+
 void IRSlot::clearIR()
 {
     displayData.folderName.clear();
