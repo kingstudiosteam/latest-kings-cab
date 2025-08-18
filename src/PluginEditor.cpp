@@ -195,9 +195,9 @@ void TheKingsCabAudioProcessorEditor::resized()
                 {
                     // Left column: align to left edge (small margin from edge)
                     slotX = slotsArea.getX() + 10;
-                }
-                else
-                {
+    }
+    else
+    {
                     // Right column: align to right edge (slot ends at right edge with small margin)
                     slotX = slotsArea.getRight() - slotWidth - 10;
                 }
