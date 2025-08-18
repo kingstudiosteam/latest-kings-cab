@@ -39,10 +39,10 @@ void TheKingsCabAudioProcessorEditor::setupComponents()
     // Master controls setup
     masterGainSlider = std::make_unique<juce::Slider>(juce::Slider::RotaryHorizontalVerticalDrag,
                                                       juce::Slider::NoTextBox);
-    masterGainSlider->setRange(0.0, 4.0, 0.001);
-    masterGainSlider->setSkewFactorFromMidPoint(1.0); // finer control near 1.0
+    // dB range: -24..+24, default 0 dB
+    masterGainSlider->setRange(-24.0, 24.0, 0.1);
     masterGainSlider->setVelocityModeParameters(0.8, 1, 0.05, true);
-    masterGainSlider->setValue(1.0);
+    masterGainSlider->setValue(0.0);
     masterGainSlider->addListener(this);
     addAndMakeVisible(*masterGainSlider);
 
@@ -53,7 +53,7 @@ void TheKingsCabAudioProcessorEditor::setupComponents()
     masterMixSlider->addListener(this);
     addAndMakeVisible(*masterMixSlider);
 
-    masterGainLabel = std::make_unique<juce::Label>("GainLabel", "MASTER VOLUME");
+    masterGainLabel = std::make_unique<juce::Label>("GainLabel", "MASTER VOLUME (dB)");
     masterGainLabel->setFont(juce::Font(11.0f).boldened());
     masterGainLabel->setJustificationType(juce::Justification::centred);
     masterGainLabel->setColour(juce::Label::textColourId, 

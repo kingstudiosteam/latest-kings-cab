@@ -107,9 +107,9 @@ void IRSlot::setupComponents()
     // Gain control
     gainSlider = std::make_unique<juce::Slider>(juce::Slider::RotaryHorizontalVerticalDrag, 
                                                juce::Slider::NoTextBox);
-    gainSlider->setRange(0.0, 4.0, 0.001);
-    gainSlider->setSkewFactorFromMidPoint(1.0); // finer control near 1.0
-    gainSlider->setValue(1.0);
+    // Display/control in dB: -24..+24, default 0 dB
+    gainSlider->setRange(-24.0, 24.0, 0.1);
+    gainSlider->setValue(0.0);
     gainSlider->setVelocityModeParameters(0.8, 1, 0.05, true);
     gainSlider->addListener(this);
     addAndMakeVisible(gainSlider.get());

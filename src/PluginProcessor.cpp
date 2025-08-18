@@ -198,20 +198,22 @@ void TheKingsCabAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
 
     // Sync realtime parameters to DSP engine (master and per-slot)
     {
-        const float masterGainValue = valueTreeState.getRawParameterValue("master_gain")->load();
+        const float masterGainDb = valueTreeState.getRawParameterValue("master_gain")->load();
+        const float masterGainLin = juce::Decibels::decibelsToGain(masterGainDb, -100.0f);
         const float masterMixValue  = valueTreeState.getRawParameterValue("master_mix")->load();
-        convolutionEngine.setMasterGain(masterGainValue);
+        convolutionEngine.setMasterGain(masterGainLin);
         convolutionEngine.setMasterMix(masterMixValue);
 
         for (int slot = 0; slot < kNumIRSlots; ++slot)
         {
             const juce::String prefix = "slot" + juce::String(slot) + "_";
-            const float slotGain  = valueTreeState.getRawParameterValue(prefix + "gain")->load();
+            const float slotGainDb  = valueTreeState.getRawParameterValue(prefix + "gain")->load();
+            const float slotGainLin = juce::Decibels::decibelsToGain(slotGainDb, -100.0f);
             const float slotMuteF = valueTreeState.getRawParameterValue(prefix + "mute")->load();
             const float slotSoloF = valueTreeState.getRawParameterValue(prefix + "solo")->load();
             const float slotPhsF  = valueTreeState.getRawParameterValue(prefix + "phase")->load();
 
-            convolutionEngine.setSlotGain(slot, slotGain);
+            convolutionEngine.setSlotGain(slot, slotGainLin);
             convolutionEngine.setSlotMute(slot, slotMuteF > 0.5f);
             convolutionEngine.setSlotSolo(slot, slotSoloF > 0.5f);
             convolutionEngine.setSlotPhaseInvert(slot, slotPhsF > 0.5f);
@@ -375,10 +377,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout TheKingsCabAudioProcessor::c
 
     // Master controls
     {
-        juce::NormalisableRange<float> masterGainRange(0.0f, 4.0f, 0.001f);
-        masterGainRange.setSkewForCentre(1.0f); // fine control around unity
+        // dB range: -24 dB to +24 dB, default 0 dB
+        juce::NormalisableRange<float> masterGainRange(-24.0f, 24.0f, 0.1f);
         parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
-            "master_gain", "Master Gain", masterGainRange, 1.0f));
+            "master_gain", "Master Gain (dB)", masterGainRange, 0.0f));
     }
 
     parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
@@ -390,11 +392,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout TheKingsCabAudioProcessor::c
     {
         auto slotPrefix = "slot" + juce::String(i) + "_";
 
-        juce::NormalisableRange<float> slotGainRange(0.0f, 4.0f, 0.001f);
-        slotGainRange.setSkewForCentre(1.0f); // fine control around unity
+        // dB range per slot
+        juce::NormalisableRange<float> slotGainRange(-24.0f, 24.0f, 0.1f);
         parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
-            slotPrefix + "gain", "Slot " + juce::String(i + 1) + " Gain",
-            slotGainRange, 1.0f));
+            slotPrefix + "gain", "Slot " + juce::String(i + 1) + " Gain (dB)",
+            slotGainRange, 0.0f));
 
         parameters.push_back(std::make_unique<juce::AudioParameterBool>(
             slotPrefix + "mute", "Slot " + juce::String(i + 1) + " Mute", false));
