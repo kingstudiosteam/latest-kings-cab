@@ -265,40 +265,48 @@ void IRSlot::comboBoxChanged(juce::ComboBox* comboBoxThatHasChanged)
     else if (comboBoxThatHasChanged == irComboBox.get())
     {
         DBG("IR ComboBox changed");
-        DBG("IR ComboBox selected ID: " << irComboBox->getSelectedId());
-        DBG("IR ComboBox selected item index: " << irComboBox->getSelectedItemIndex());
+        const int selectedId = irComboBox->getSelectedId();
+        DBG("IR ComboBox selected ID: " << selectedId);
         DBG("Available IRs count: " << displayData.availableIRs.size());
-        
-        // Load selected IR
-        auto selectedIRIndex = irComboBox->getSelectedItemIndex();
-        if (selectedIRIndex >= 0 && selectedIRIndex < static_cast<int>(displayData.availableIRs.size()))
+
+        // ID 1 = None; IDs 2..N+1 map to IR indices 0..N-1
+        if (selectedId == 1)
         {
-            auto& selectedIR = displayData.availableIRs[selectedIRIndex];
-            DBG("Loading IR at index " << selectedIRIndex << ": " << selectedIR.name);
-            DBG("IR file path: " << selectedIR.file.getFullPathName());
-            
-            if (onIRSelected)
+            DBG("Selected 'None' - clearing IR for slot " << slotIndex);
+            if (onIRCleared) onIRCleared(slotIndex);
+            clearIR();
+        }
+        else if (selectedId >= 2)
+        {
+            const int selectedIRIndex = selectedId - 2;
+            if (selectedIRIndex >= 0 && selectedIRIndex < static_cast<int>(displayData.availableIRs.size()))
             {
-                DBG("CALLING onIRSelected callback from comboBoxChanged");
-                onIRSelected(slotIndex, selectedIR.file);
-                DBG("onIRSelected callback COMPLETED from comboBoxChanged");
+                auto& selectedIR = displayData.availableIRs[selectedIRIndex];
+                DBG("Loading IR at index " << selectedIRIndex << ": " << selectedIR.name);
+                DBG("IR file path: " << selectedIR.file.getFullPathName());
+
+                if (onIRSelected)
+                {
+                    DBG("CALLING onIRSelected callback from comboBoxChanged");
+                    onIRSelected(slotIndex, selectedIR.file);
+                    DBG("onIRSelected callback COMPLETED from comboBoxChanged");
+                }
+                else
+                {
+                    DBG("ERROR - No onIRSelected callback in comboBoxChanged");
+                }
+
+                // Update display data
+                displayData.irName = selectedIR.name;
+                displayData.hasValidIR = true;
+                setActive(true);
+                repaint();
+                DBG("Display data updated and repaint called");
             }
             else
             {
-                DBG("ERROR - No onIRSelected callback in comboBoxChanged");
+                DBG("ERROR - Invalid IR selection index: " << selectedIRIndex << " (available: " << displayData.availableIRs.size() << ")");
             }
-            
-            // Update display data
-            displayData.irName = selectedIR.name;
-            displayData.hasValidIR = true;
-            setActive(true);
-            repaint();
-            
-            DBG("Display data updated and repaint called");
-        }
-        else
-        {
-            DBG("ERROR - Invalid IR selection index: " << selectedIRIndex << " (available: " << displayData.availableIRs.size() << ")");
         }
     }
     else
@@ -407,7 +415,9 @@ void IRSlot::clearIR()
     
     folderComboBox->setSelectedItemIndex(0);
     irComboBox->clear();
-    irComboBox->setEnabled(false);
+    irComboBox->setEnabled(true);
+    irComboBox->addItem("None", 1);
+    irComboBox->setSelectedId(1, juce::dontSendNotification);
     
     setActive(false);
     repaint();
@@ -445,7 +455,8 @@ void IRSlot::updateIRComboBox()
     
     if (selectedFolderIndex >= 0 && selectedFolderIndex < static_cast<int>(availableFolders.size()))
     {
-        irComboBox->addItem("Select IR...", -1);
+        // Add explicit 'None' first
+        irComboBox->addItem("None", 1);
         
         // Get IRs from the selected folder
         const auto& folder = availableFolders[selectedFolderIndex];
@@ -456,7 +467,7 @@ void IRSlot::updateIRComboBox()
         // Populate the combo box with proper IDs AND pre-load buffers
         for (int i = 0; i < static_cast<int>(folder.irFiles.size()); ++i)
         {
-            irComboBox->addItem(folder.irFiles[i].name, i + 1); // IDs start from 1 (0 is reserved for "Select IR...")
+            irComboBox->addItem(folder.irFiles[i].name, i + 2); // IDs start from 2 (1 reserved for 'None')
             
             // Pre-load this IR buffer for instant navigation
             preloadIRBuffer(folder.irFiles[i].file);
@@ -465,6 +476,7 @@ void IRSlot::updateIRComboBox()
         DBG("Pre-loaded " << preloadedIRBuffers.size() << " IR buffers for instant navigation");
         
         irComboBox->setEnabled(true);
+        irComboBox->setSelectedId(1, juce::dontSendNotification);
         displayData.folderName = folder.name;
     }
 }
@@ -553,9 +565,9 @@ void IRSlot::navigateToIR(int direction)
     DBG("Current IR ComboBox ItemIndex: " << currentSelectedItemIndex);
     DBG("Current IR ComboBox Text: '" << irComboBox->getText() << "'");
     
-    // Find current IR index (ComboBox IDs start from 1, array indices from 0)
-    if (currentSelectedId > 0)
-        currentIndex = currentSelectedId - 1;
+    // Find current IR index: IDs 2.. map to 0..
+    if (currentSelectedId >= 2)
+        currentIndex = currentSelectedId - 2;
     
     DBG("Calculated currentIndex from ID: " << currentIndex);
     
@@ -619,10 +631,10 @@ void IRSlot::navigateToIR(int direction)
         return;
     }
     
-    DBG("Setting ComboBox to ID: " << (newIndex + 1) << " (index " << newIndex << ")");
+    DBG("Setting ComboBox to ID: " << (newIndex + 2) << " (index " << newIndex << ")");
     
     // Update ComboBox selection WITHOUT notification first
-    irComboBox->setSelectedId(newIndex + 1, juce::dontSendNotification);
+    irComboBox->setSelectedId(newIndex + 2, juce::dontSendNotification);
     
     DBG("Using pre-loaded IR buffer for instant navigation...");
     

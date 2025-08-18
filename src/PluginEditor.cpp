@@ -144,8 +144,8 @@ void TheKingsCabAudioProcessorEditor::resized()
     auto statusArea = footerBounds.removeFromRight(60);
     statusLabel->setBounds(statusArea);
     
-    // Store link centered in remaining space
-    storeLink->setBounds(footerBounds);
+    // Store link centered in remaining space (ensure full width centering)
+    storeLink->setBounds(footerBounds.withTrimmedLeft(0).withTrimmedRight(0));
     
     // Main content area
     bounds.reduce(8, 8);
