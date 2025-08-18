@@ -29,16 +29,19 @@ jobs:
         cd build
         cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DJUCE_BUILD_EXTRAS=OFF -DJUCE_BUILD_EXAMPLES=OFF -DJUCE_FETCH_VST3_SDK=ON
     
-    - name: Build Windows Plugins (VST3 + Standalone only)
+    - name: Build Windows Plugins (VST3 + Standalone + try AAX)
       run: |
         cd build
         cmake --build . --config Release --parallel 4 --target TheKingsCab_VST3 TheKingsCab_Standalone
+        echo "Attempting AAX build (will continue if unavailable)"
+        cmake --build . --config Release --parallel 2 --target TheKingsCab_AAX || echo "AAX build failed or SDK unavailable; continuing"
     
     - name: Verify Windows Builds
       run: |
         echo "Checking Windows plugin builds..."
         ls -la "TheKingsCab_artefacts/Release/VST3/" || echo "No VST3 folder found"
         ls -la "TheKingsCab_artefacts/Release/Standalone/" || echo "No Standalone folder found"
+        ls -la "TheKingsCab_artefacts/Release/AAX/" || echo "No AAX folder found"
         echo "✅ Windows plugins built successfully!"
     
     - name: Create Windows Installer Structure

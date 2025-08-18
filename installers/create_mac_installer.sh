@@ -6,6 +6,10 @@
 
 set -e
 
+# Resolve absolute paths
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
 echo "🎛️  Creating The King's Cab macOS Installer..."
 echo "=============================================="
 
@@ -14,8 +18,8 @@ PLUGIN_NAME="The Kings Cab"
 COMPANY_NAME="King Studios"
 VERSION="1.0.0"
 BUNDLE_ID="com.kingstudios.thekingscab"
-BUILD_DIR="../build"
-INSTALLER_DIR="./mac"
+BUILD_DIR="${ROOT_DIR}/build"
+INSTALLER_DIR="${SCRIPT_DIR}/mac"
 PKG_DIR="${INSTALLER_DIR}/pkg_contents"
 RESOURCES_DIR="${INSTALLER_DIR}/resources"
 
@@ -35,24 +39,32 @@ mkdir -p "${PKG_DIR}/Library/Application Support/Avid/Audio/Plug-Ins"
 # Create IR files directory
 mkdir -p "${PKG_DIR}/Users/Shared/King Studios/The Kings Cab/IR Collections"
 
+# Ensure build exists for VST3/AU
+if [ ! -d "${BUILD_DIR}/TheKingsCab_artefacts/Release/VST3/${PLUGIN_NAME}.vst3" ] || \
+   [ ! -d "${BUILD_DIR}/TheKingsCab_artefacts/Release/AU/${PLUGIN_NAME}.component" ]; then
+  echo "🔨 Building macOS VST3/AU (Release)..."
+  cmake -S "${ROOT_DIR}" -B "${BUILD_DIR}" -DCMAKE_BUILD_TYPE=Release
+  cmake --build "${BUILD_DIR}" --config Release --target TheKingsCab_VST3 TheKingsCab_AU -j4
+fi
+
 # Copy VST3 plugin
 if [ -d "${BUILD_DIR}/TheKingsCab_artefacts/Release/VST3/${PLUGIN_NAME}.vst3" ]; then
-    echo "✅ Copying VST3 plugin..."
-    cp -R "${BUILD_DIR}/TheKingsCab_artefacts/Release/VST3/${PLUGIN_NAME}.vst3" \
-          "${PKG_DIR}/Library/Audio/Plug-Ins/VST3/"
+  echo "✅ Copying VST3 plugin..."
+  cp -R "${BUILD_DIR}/TheKingsCab_artefacts/Release/VST3/${PLUGIN_NAME}.vst3" \
+        "${PKG_DIR}/Library/Audio/Plug-Ins/VST3/"
 else
-    echo "❌ VST3 plugin not found. Building first..."
-    exit 1
+  echo "❌ VST3 plugin still not found after build. Aborting."
+  exit 1
 fi
 
 # Copy AU component
 if [ -d "${BUILD_DIR}/TheKingsCab_artefacts/Release/AU/${PLUGIN_NAME}.component" ]; then
-    echo "✅ Copying AU component..."
-    cp -R "${BUILD_DIR}/TheKingsCab_artefacts/Release/AU/${PLUGIN_NAME}.component" \
-          "${PKG_DIR}/Library/Audio/Plug-Ins/Components/"
+  echo "✅ Copying AU component..."
+  cp -R "${BUILD_DIR}/TheKingsCab_artefacts/Release/AU/${PLUGIN_NAME}.component" \
+        "${PKG_DIR}/Library/Audio/Plug-Ins/Components/"
 else
-    echo "❌ AU component not found. Building first..."
-    exit 1
+  echo "❌ AU component still not found after build. Aborting."
+  exit 1
 fi
 
 # Copy AAX plugin (if available)
