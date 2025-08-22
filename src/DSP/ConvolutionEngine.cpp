@@ -80,18 +80,30 @@ void ConvolutionEngine::process(const juce::dsp::ProcessContextReplacing<float>&
             continue;
         hasAnyLoadedIR = true;
 
-        // Skip if muted or if other slots are soloed (and this isn't)
-        bool shouldPlay = !slot.muted.load() && (!hasAnySolo || slot.soloed.load());
+        // Skip if muted (unless soloed) or if other slots are soloed (and this isn't)
+        const bool slotMuted = slot.muted.load();
+        const bool slotSoloed = slot.soloed.load();
+        const bool effectiveMuted = slotMuted && !slotSoloed; // Solo overrides mute for this slot
+        bool shouldPlay = !effectiveMuted && (!hasAnySolo || slotSoloed);
         if (!shouldPlay)
             continue;
 
         // Skip processing while this slot is loading a new IR to avoid transient crashes
-        if (!slot.isLoading.load())
+        if (slot.isLoading.load())
+            continue;
+
+        // If this slot just loaded, allow exactly one block of dry-through to avoid perceived silence/glitch
+        if (slot.justLoaded.exchange(false))
         {
-            // Process this slot
-            processSlot(static_cast<int>(i), context);
+            for (int ch = 0; ch < numChannels; ++ch)
+                wetBuffer.addFrom(ch, 0, inputBlock.getChannelPointer(ch), numSamples, slot.gain.load());
             anySlotProcessed = true;
+            continue;
         }
+
+        // Process this slot
+        processSlot(static_cast<int>(i), context);
+        anySlotProcessed = true;
     }
 
     // Apply master controls
@@ -210,6 +222,7 @@ bool ConvolutionEngine::loadImpulseResponse(int slotIndex, const juce::AudioBuff
         
         DBG("Convolution forced to active state");
         slot.hasIR.store(true);
+        slot.justLoaded.store(true);
         slot.isLoading.store(false);
         DBG("=== CONVOLUTION ENGINE loadImpulseResponse SUCCESS ===");
         return true;
