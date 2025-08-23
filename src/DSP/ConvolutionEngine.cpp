@@ -65,8 +65,12 @@ void ConvolutionEngine::process(const juce::dsp::ProcessContextReplacing<float>&
     wetBuffer.setSize(numChannels, numSamples, false, false, true);
     wetBuffer.clear();
 
-    // Check if any slots are soloed
+    // Check if any slots are soloed and count them
     bool hasAnySolo = hasAnySoloedSlots();
+    int numSoloEnabled = 0;
+    for (const auto& s : irSlots)
+        if (s->soloed.load() && s->hasIR.load())
+            ++numSoloEnabled;
     bool anySlotProcessed = false;
     bool hasAnyLoadedIR = false;
 
@@ -104,6 +108,24 @@ void ConvolutionEngine::process(const juce::dsp::ProcessContextReplacing<float>&
         // Process this slot
         processSlot(static_cast<int>(i), context);
         anySlotProcessed = true;
+    }
+
+    // If we had solos active but nothing played (e.g., transient state), fall back to non-solo logic
+    if (!anySlotProcessed && numSoloEnabled > 0)
+    {
+        DBG("Convolution: No audio produced with solo active; falling back to non-solo mix for continuity");
+        for (size_t i = 0; i < irSlots.size(); ++i)
+        {
+            auto& slot = *irSlots[i];
+            if (!slot.hasIR.load())
+                continue;
+            if (slot.isLoading.load())
+                continue;
+            if (slot.muted.load())
+                continue;
+            processSlot(static_cast<int>(i), context);
+            anySlotProcessed = true;
+        }
     }
 
     // Apply master controls
